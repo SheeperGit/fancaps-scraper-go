@@ -1,0 +1,1 @@
+# fancaps-scraper-go
