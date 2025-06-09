@@ -40,12 +40,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.confirmed = false
 			return m, tea.Quit
 		/* Move cursor up. */
-		case "up", "k":
+		case "up", "w", "k":
 			if m.cursor > 0 {
 				m.cursor--
 			}
 		/* Move cursor down. */
-		case "down", "j":
+		case "down", "s", "j":
 			if m.cursor < len(m.choices)-1 {
 				m.cursor++
 			}
@@ -57,6 +57,23 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				delete(m.selected, choice)
 			} else {
 				m.selected[choice] = struct{}{}
+			}
+		/* Toggle all selections. */
+		case "t":
+			if len(m.selected) < len(m.choices) {
+				for _, choice := range m.choices {
+					_, ok := m.selected[choice]
+					if !ok {
+						m.selected[choice] = struct{}{}
+					}
+				}
+			} else {
+				for _, choice := range m.choices {
+					_, ok := m.selected[choice]
+					if ok {
+						delete(m.selected, choice)
+					}
+				}
 			}
 		/* Confirm selection. Return model. */
 		case "p":
