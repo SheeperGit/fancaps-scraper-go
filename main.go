@@ -9,7 +9,7 @@ import (
 	"os"
 
 	"github.com/gocolly/colly"
-	// "github.com/charmbracelet/bubbletea"
+	"sheeper.com/fancaps-scraper-go/cmd/menu"
 )
 
 func getSearchQuery() string {
@@ -26,6 +26,17 @@ func getSearchQuery() string {
 }
 
 func main() {
+	// selectedCategories := map[string]struct{}{}
+	// for len(selectedCategories) == 0 {
+	// 	selectedCategories = menu.GetCategoryMenu()
+	// }
+
+	selectedCategories := menu.GetCategoryMenu()
+
+	for elem := range selectedCategories {
+		fmt.Println(elem)
+	}
+	os.Exit(0)
 	var (
 		query  = flag.String("q", "", "Search query term (required)")
 		movies = flag.Bool("movies", true, "Include Movies in search query")
