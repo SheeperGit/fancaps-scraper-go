@@ -14,9 +14,10 @@ const (
 )
 
 type model struct {
-	cursor   int
-	choices  []string
-	selected map[string]struct{}
+	cursor    int
+	choices   []string
+	selected  map[string]struct{}
+	confirmed bool
 }
 
 func initialModel() model {
@@ -34,16 +35,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
+		/* Cancel. Return nothing. */
 		case "ctrl+c", "q", "esc":
+			m.confirmed = false
 			return m, tea.Quit
+		/* Move cursor up. */
 		case "up", "k":
 			if m.cursor > 0 {
 				m.cursor--
 			}
+		/* Move cursor down. */
 		case "down", "j":
 			if m.cursor < len(m.choices)-1 {
 				m.cursor++
 			}
+		/* Toggle cursor selection. */
 		case "enter", " ":
 			choice := m.choices[m.cursor]
 			_, ok := m.selected[choice]
@@ -51,6 +57,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				delete(m.selected, choice)
 			} else {
 				m.selected[choice] = struct{}{}
+			}
+		/* Confirm selection. Return model. */
+		case "p":
+			/* Must select at least one category. */
+			// TODO: Message that selection must be non-empty.
+			if len(m.selected) != 0 {
+				m.confirmed = true
+				return m, tea.Quit
+			} else {
+				fmt.Printf("Select at least one category.")
 			}
 		}
 	}
@@ -80,7 +96,7 @@ func (m model) View() string {
 	return s
 }
 
-func GetCategoryMenu() map[string]struct{} {
+func GetCategoryMenu() (map[string]struct{}, bool) {
 	p := tea.NewProgram(initialModel())
 	if m, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Category Menu has encountered an error: %v", err)
@@ -88,9 +104,9 @@ func GetCategoryMenu() map[string]struct{} {
 	} else {
 		m, ok := m.(model)
 		if ok {
-			return m.selected
+			return m.selected, m.confirmed
 		}
 	}
 
-	return map[string]struct{}{}
+	return map[string]struct{}{}, false
 }
