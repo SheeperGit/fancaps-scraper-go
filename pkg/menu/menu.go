@@ -155,6 +155,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+var highlightStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("212"))
+
 func (m model) View() string {
 	s := "Select Categories to Scrape from:\n\n"
 
@@ -169,7 +171,11 @@ func (m model) View() string {
 			checked = "x"
 		}
 
-		s += fmt.Sprintf("%s [%s] %s\n", cursor, checked, choice)
+		line := fmt.Sprintf("%s [%s] %s", cursor, checked, choice)
+		if m.cursor == i {
+			line = highlightStyle.Render(line)
+		}
+		s += line + "\n"
 	}
 
 	s += "\n" + m.help.View(m.keys) + "\n"
