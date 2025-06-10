@@ -4,8 +4,65 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
+
+type keyMap struct {
+	Up        key.Binding
+	Down      key.Binding
+	Toggle    key.Binding
+	ToggleAll key.Binding
+	Confirm   key.Binding
+	Help      key.Binding
+	Quit      key.Binding
+}
+
+/* Keybindings to be shown in the mini-help view. */
+func (k keyMap) ShortHelp() []key.Binding {
+	return []key.Binding{k.Help, k.Quit}
+}
+
+/* Keybindings to be shown in the expanded-help view. */
+func (k keyMap) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{k.Up, k.Down, k.Toggle, k.ToggleAll, k.Confirm}, // First Column
+		{k.Help, k.Quit}, // Second Column
+	}
+}
+
+var keys = keyMap{
+	Up: key.NewBinding(
+		key.WithKeys("up", "w", "k"),
+		key.WithHelp("↑/w/k", "move up"),
+	),
+	Down: key.NewBinding(
+		key.WithKeys("down", "s", "j"),
+		key.WithHelp("↓/s/j", "move down"),
+	),
+	Toggle: key.NewBinding(
+		key.WithKeys("enter", " "),
+		key.WithHelp("enter/[space]", "toggle selection"),
+	),
+	ToggleAll: key.NewBinding(
+		key.WithKeys("t"),
+		key.WithHelp("t", "toggle all"),
+	),
+	Confirm: key.NewBinding(
+		key.WithKeys("p"),
+		key.WithHelp("p", "confirm"),
+	),
+	Help: key.NewBinding(
+		key.WithKeys("?"),
+		key.WithHelp("?", "toggle help"),
+	),
+	Quit: key.NewBinding(
+		key.WithKeys("q", "esc", "ctrl+c"),
+		key.WithHelp("q", "quit"),
+	),
+}
 
 const (
 	MOVIE_TEXT = "Movies"
@@ -14,16 +71,22 @@ const (
 )
 
 type model struct {
-	cursor    int
-	choices   []string
-	selected  map[string]struct{}
-	confirmed bool
+	keys       keyMap
+	help       help.Model
+	inputStyle lipgloss.Style
+	cursor     int
+	choices    []string
+	selected   map[string]struct{}
+	confirmed  bool
 }
 
 func initialModel() model {
 	return model{
-		choices:  []string{MOVIE_TEXT, TV_TEXT, ANIME_TEXT},
-		selected: make(map[string]struct{}),
+		keys:       keys,
+		help:       help.New(),
+		inputStyle: lipgloss.NewStyle().Foreground(lipgloss.Color("#FF75B7")),
+		choices:    []string{MOVIE_TEXT, TV_TEXT, ANIME_TEXT},
+		selected:   make(map[string]struct{}),
 	}
 }
 
@@ -33,24 +96,21 @@ func (m model) Init() tea.Cmd {
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		/* Truncate help menu width based on message width. */
+		m.help.Width = msg.Width
+
 	case tea.KeyMsg:
-		switch msg.String() {
-		/* Cancel. Return nothing. */
-		case "ctrl+c", "q", "esc":
-			m.confirmed = false
-			return m, tea.Quit
-		/* Move cursor up. */
-		case "up", "w", "k":
+		switch {
+		case key.Matches(msg, m.keys.Up):
 			if m.cursor > 0 {
 				m.cursor--
 			}
-		/* Move cursor down. */
-		case "down", "s", "j":
+		case key.Matches(msg, m.keys.Down):
 			if m.cursor < len(m.choices)-1 {
 				m.cursor++
 			}
-		/* Toggle cursor selection. */
-		case "enter", " ":
+		case key.Matches(msg, m.keys.Toggle):
 			choice := m.choices[m.cursor]
 			_, ok := m.selected[choice]
 			if ok {
@@ -58,8 +118,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else {
 				m.selected[choice] = struct{}{}
 			}
-		/* Toggle all selections. */
-		case "t":
+		case key.Matches(msg, m.keys.ToggleAll):
 			if len(m.selected) < len(m.choices) {
 				for _, choice := range m.choices {
 					_, ok := m.selected[choice]
@@ -75,8 +134,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				}
 			}
-		/* Confirm selection. Return model. */
-		case "p":
+		case key.Matches(msg, m.keys.Confirm):
 			/* Must select at least one category. */
 			// TODO: Message that selection must be non-empty.
 			if len(m.selected) != 0 {
@@ -85,7 +143,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else {
 				fmt.Printf("Select at least one category.")
 			}
+		case key.Matches(msg, m.keys.Help):
+			m.help.ShowAll = !m.help.ShowAll
+		case key.Matches(msg, m.keys.Quit):
+			m.confirmed = false
+			return m, tea.Quit
 		}
+
 	}
 
 	return m, nil
@@ -108,7 +172,7 @@ func (m model) View() string {
 		s += fmt.Sprintf("%s [%s] %s\n", cursor, checked, choice)
 	}
 
-	s += "\nPress 'q' to quit.\n"
+	s += "\n" + m.help.View(m.keys) + "\n"
 
 	return s
 }
