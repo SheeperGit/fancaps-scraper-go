@@ -18,4 +18,12 @@ func main() {
 	for _, t := range titles {
 		fmt.Println(t.Name, t.Link)
 	}
+
+	episodes := scraper.GetEpisodes(titles)
+
+	/* Debug: Print found episodes. */
+	fmt.Println("Found Episodes:")
+	for _, e := range episodes {
+		fmt.Printf("%s -> %s\n", e.Name, e.Link)
+	}
 }

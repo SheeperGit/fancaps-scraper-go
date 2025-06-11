@@ -22,7 +22,7 @@ func GetTitles(searchURL string) []Title {
 
 	/*
 		On every h4 element which has an anchor child element,
-		print the link text and the link itself.
+		extract the title name and the link to view the title's episode(s), if any.
 	*/
 	c.OnHTML("h4 > a", func(e *colly.HTMLElement) {
 		link := e.Request.AbsoluteURL(e.Attr("href"))
