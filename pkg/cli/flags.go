@@ -7,6 +7,8 @@ import (
 	"log"
 	"net/url"
 	"os"
+
+	"sheeper.com/fancaps-scraper-go/pkg/menu"
 )
 
 type CLIFlags struct {
@@ -34,6 +36,27 @@ func ParseCLI() CLIFlags {
 		if *query == "" {
 			fmt.Fprintf(os.Stderr, "CLI Error: Search query cannot be empty.\n")
 			flag.Usage()
+		}
+	}
+
+	/* If no categories flags specified, open Category Menu. */
+	if !*movies && !*tv && !*anime {
+		selectedMenuCategories, confirmed := menu.GetCategoriesMenu()
+		if !confirmed {
+			fmt.Fprintf(os.Stderr, "Category Menu: Operation aborted.\n")
+			os.Exit(1)
+		}
+
+		/* Set active categories according to Category Menu. */
+		for cat := range selectedMenuCategories {
+			switch cat {
+			case menu.MOVIE_TEXT:
+				*movies = true
+			case menu.TV_TEXT:
+				*tv = true
+			case menu.ANIME_TEXT:
+				*anime = true
+			}
 		}
 	}
 
