@@ -183,7 +183,7 @@ func (m model) View() string {
 	return s
 }
 
-func GetCategoryMenu() (map[string]struct{}, bool) {
+func GetCategoriesMenu() (map[string]struct{}, bool) {
 	p := tea.NewProgram(initialModel())
 	if m, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Category Menu has encountered an error: %v", err)

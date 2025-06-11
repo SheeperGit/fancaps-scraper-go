@@ -4,18 +4,18 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/gocolly/colly"
 	"sheeper.com/fancaps-scraper-go/pkg/cli"
 	"sheeper.com/fancaps-scraper-go/pkg/menu"
+	"sheeper.com/fancaps-scraper-go/pkg/scraper"
 )
 
 func main() {
 	flags := cli.ParseCLI()
 
 	if !flags.Movies && !flags.TV && !flags.Anime {
-		selectedMenuCategories, confirmed := menu.GetCategoryMenu()
+		selectedMenuCategories, confirmed := menu.GetCategoriesMenu()
 		if !confirmed {
-			fmt.Printf("Category Menu: Operation aborted.\n")
+			fmt.Fprintf(os.Stderr, "Category Menu: Operation aborted.\n")
 			os.Exit(1)
 		}
 
@@ -33,30 +33,11 @@ func main() {
 	}
 
 	searchURL := flags.BuildQueryURL()
+	titles := scraper.GetTitles(searchURL)
 
-	/* Create a Collector for FanCaps. */
-	c := colly.NewCollector(
-		colly.AllowedDomains("fancaps.net"),
-		colly.Async(true),
-	)
-
-	/*
-		On every h4 element which has an anchor child element,
-		print the link text and the link itself.
-	*/
-	c.OnHTML("h4 > a", func(e *colly.HTMLElement) {
-		link := e.Request.AbsoluteURL(e.Attr("href"))
-		fmt.Printf("Link found: %q -> %s\n", e.Text, link)
-	})
-
-	/* Before making a request, print "Visiting ..." */
-	c.OnRequest(func(req *colly.Request) {
-		fmt.Println("Visiting:", req.URL.String())
-	})
-
-	/* Start the collector. */
-	c.Visit(searchURL)
-
-	/* Wait for the collector to finish. (Required for Async) */
-	c.Wait()
+	/* Debug: Print found titles. */
+	fmt.Println("Found Titles:")
+	for _, t := range titles {
+		fmt.Println(t.Name, t.Link)
+	}
 }
