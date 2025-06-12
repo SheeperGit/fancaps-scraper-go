@@ -64,19 +64,34 @@ var keys = keyMap{
 	),
 }
 
+/* Enum for Categories. */
+type Category int
+
 const (
-	MOVIE_TEXT = "Movies"
-	TV_TEXT    = "TV Series"
-	ANIME_TEXT = "Anime"
+	CategoryMovie Category = iota
+	CategoryTV
+	CategoryAnime
+	CategoryUnknown
 )
+
+var CategoryName = map[Category]string{
+	CategoryMovie:   "Movies",
+	CategoryTV:      "TV Series",
+	CategoryAnime:   "Anime",
+	CategoryUnknown: "Category Unknown",
+}
+
+func (cat Category) String() string {
+	return CategoryName[cat]
+}
 
 type model struct {
 	keys       keyMap
 	help       help.Model
 	inputStyle lipgloss.Style
 	cursor     int
-	choices    []string
-	selected   map[string]struct{}
+	choices    []Category
+	selected   map[Category]struct{}
 	confirmed  bool
 }
 
@@ -85,8 +100,8 @@ func initialModel() model {
 		keys:       keys,
 		help:       help.New(),
 		inputStyle: lipgloss.NewStyle().Foreground(lipgloss.Color("#FF75B7")),
-		choices:    []string{MOVIE_TEXT, TV_TEXT, ANIME_TEXT},
-		selected:   make(map[string]struct{}),
+		choices:    []Category{CategoryMovie, CategoryTV, CategoryAnime},
+		selected:   make(map[Category]struct{}),
 	}
 }
 
@@ -183,7 +198,7 @@ func (m model) View() string {
 	return s
 }
 
-func GetCategoriesMenu() (map[string]struct{}, bool) {
+func GetCategoriesMenu() (map[Category]struct{}, bool) {
 	p := tea.NewProgram(initialModel())
 	if m, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Category Menu has encountered an error: %v", err)
@@ -195,5 +210,5 @@ func GetCategoriesMenu() (map[string]struct{}, bool) {
 		}
 	}
 
-	return map[string]struct{}{}, false
+	return map[Category]struct{}{}, false
 }

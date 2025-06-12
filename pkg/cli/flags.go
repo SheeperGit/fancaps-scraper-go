@@ -50,11 +50,11 @@ func ParseCLI() CLIFlags {
 		/* Set active categories according to Category Menu. */
 		for cat := range selectedMenuCategories {
 			switch cat {
-			case menu.MOVIE_TEXT:
+			case menu.CategoryMovie:
 				*movies = true
-			case menu.TV_TEXT:
+			case menu.CategoryTV:
 				*tv = true
-			case menu.ANIME_TEXT:
+			case menu.CategoryAnime:
 				*anime = true
 			}
 		}

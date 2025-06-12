@@ -2,13 +2,17 @@ package scraper
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/gocolly/colly"
+	"sheeper.com/fancaps-scraper-go/pkg/menu"
 )
 
 type Title struct {
-	Name string
-	Link string
+	Category menu.Category
+	Episodes []Episode
+	Name     string
+	Link     string
 }
 
 func GetTitles(searchURL string) []Title {
@@ -17,7 +21,6 @@ func GetTitles(searchURL string) []Title {
 	/* Create a Collector for FanCaps. */
 	c := colly.NewCollector(
 		colly.AllowedDomains("fancaps.net"),
-		colly.Async(true),
 	)
 
 	/*
@@ -27,13 +30,14 @@ func GetTitles(searchURL string) []Title {
 	c.OnHTML("h4 > a", func(e *colly.HTMLElement) {
 		link := e.Request.AbsoluteURL(e.Attr("href"))
 		title := Title{
-			Name: e.Text,
-			Link: link,
+			Category: getCategory(link),
+			Name:     e.Text,
+			Link:     link,
 		}
 		titles = append(titles, title)
 	})
 
-	/* Before making a request, print "Visiting ..." */
+	/* Before making a request, print "Visiting: <URL>" */
 	c.OnRequest(func(req *colly.Request) {
 		fmt.Println("Visiting:", req.URL.String())
 	})
@@ -41,8 +45,19 @@ func GetTitles(searchURL string) []Title {
 	/* Start the collector. */
 	c.Visit(searchURL)
 
-	/* Wait for the collector to finish. (Required for Async) */
-	c.Wait()
-
 	return titles
+}
+
+/* Return the category of a title based on its URL. */
+func getCategory(url string) menu.Category {
+	switch {
+	case strings.Contains(url, "/movies/"):
+		return menu.CategoryMovie
+	case strings.Contains(url, "/tv/"):
+		return menu.CategoryTV
+	case strings.Contains(url, "/anime/"):
+		return menu.CategoryAnime
+	default:
+		return menu.CategoryUnknown
+	}
 }

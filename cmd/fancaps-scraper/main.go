@@ -19,11 +19,17 @@ func main() {
 		fmt.Println(t.Name, t.Link)
 	}
 
-	episodes := scraper.GetEpisodes(titles)
+	/* Get the episodes for each title. */
+	for i := range titles {
+		titles[i].Episodes = titles[i].GetEpisodes()
+	}
 
-	/* Debug: Print found episodes. */
-	fmt.Println("Found Episodes:")
-	for _, e := range episodes {
-		fmt.Printf("%s -> %s\n", e.Name, e.Link)
+	/* Debug: Print found titles and episodes. */
+	fmt.Println("FULL INFO:")
+	for _, title := range titles {
+		fmt.Printf("%s [%s] -> %s\n", title.Name, title.Category, title.Link)
+		for _, episode := range title.Episodes {
+			fmt.Printf("\t%s -> %s\n", episode.Name, episode.Link)
+		}
 	}
 }
