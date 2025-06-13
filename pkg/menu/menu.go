@@ -81,10 +81,12 @@ var CategoryName = map[Category]string{
 	CategoryUnknown: "Category Unknown",
 }
 
+/* Convert a category enumeration to its corresponding string representation. */
 func (cat Category) String() string {
 	return CategoryName[cat]
 }
 
+/* Menu Model. */
 type model struct {
 	keys       keyMap
 	help       help.Model
@@ -95,6 +97,7 @@ type model struct {
 	confirmed  bool
 }
 
+/* Initializes the model. */
 func initialModel() model {
 	return model{
 		keys:       keys,
@@ -105,10 +108,15 @@ func initialModel() model {
 	}
 }
 
+/*
+Returns an initial command for the application to run.
+In this case, sets a suitable window title.
+*/
 func (m model) Init() tea.Cmd {
 	return tea.SetWindowTitle("Fancaps-Scraper-Go Category Picker")
 }
 
+/* Handles incoming events and updates the model `model` accordingly. */
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -170,8 +178,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+/* Menu Styles. */
 var highlightStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("212"))
 
+/* Renders the UI based on the data in the model, `model`. */
 func (m model) View() string {
 	s := "Select Categories to Scrape from:\n\n"
 
@@ -198,6 +208,10 @@ func (m model) View() string {
 	return s
 }
 
+/*
+Launch the Category Menu.
+Returns selected categories and whether the user confirmed their choice.
+*/
 func GetCategoriesMenu() (map[Category]struct{}, bool) {
 	p := tea.NewProgram(initialModel())
 	if m, err := p.Run(); err != nil {

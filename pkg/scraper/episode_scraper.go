@@ -36,7 +36,7 @@ func (title Title) GetTVEpisodes() []Episode {
 
 	/*
 		If there is a next page,
-		visit it and re-trigger episode name/link extraction. (TV-only)
+		visit it to re-trigger episode name/link extraction. (TV-only)
 	*/
 	c.OnHTML("ul.pager > li > a[href]", func(e *colly.HTMLElement) {
 		nextPageURL := e.Request.AbsoluteURL(e.Attr("href"))
@@ -65,9 +65,7 @@ func (title Title) GetAnimeEpisodes() []Episode {
 		colly.AllowedDomains("fancaps.net"),
 	)
 
-	/*
-		Extract the episode's name and link. (Anime-only)
-	*/
+	/* Extract the episode's name and link. (Anime-only) */
 	c.OnHTML("a[href] > h3", func(e *colly.HTMLElement) {
 		href, _ := e.DOM.Parent().Attr("href")
 		link := e.Request.AbsoluteURL(href)
@@ -80,7 +78,7 @@ func (title Title) GetAnimeEpisodes() []Episode {
 
 	/*
 		If there is a next page,
-		visit it and re-trigger episode name/link extraction. (Anime-only)
+		visit it to re-trigger episode name/link extraction. (Anime-only)
 	*/
 	c.OnHTML("a[title='Next Page']", func(e *colly.HTMLElement) {
 		nextPageURL := e.Request.AbsoluteURL(e.Attr("href"))

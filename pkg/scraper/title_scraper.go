@@ -8,6 +8,7 @@ import (
 	"sheeper.com/fancaps-scraper-go/pkg/menu"
 )
 
+/* Full information about a Movie, TV Series, or Anime title. */
 type Title struct {
 	Category menu.Category
 	Episodes []Episode
@@ -15,6 +16,7 @@ type Title struct {
 	Link     string
 }
 
+/* Given a URL `searchURL`, return all titles found by FanCaps. */
 func GetTitles(searchURL string) []Title {
 	var titles []Title
 
@@ -23,10 +25,7 @@ func GetTitles(searchURL string) []Title {
 		colly.AllowedDomains("fancaps.net"),
 	)
 
-	/*
-		On every h4 element which has an anchor child element,
-		extract the title name and the link to view the title's episode(s), if any.
-	*/
+	/* Extract the title's name and link. */
 	c.OnHTML("h4 > a", func(e *colly.HTMLElement) {
 		link := e.Request.AbsoluteURL(e.Attr("href"))
 		title := Title{
@@ -48,7 +47,7 @@ func GetTitles(searchURL string) []Title {
 	return titles
 }
 
-/* Return the category of a title based on its URL. */
+/* Return the category of a title based on its URL, `url`. */
 func getCategory(url string) menu.Category {
 	switch {
 	case strings.Contains(url, "/movies/"):

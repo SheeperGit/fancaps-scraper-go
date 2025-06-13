@@ -11,6 +11,7 @@ import (
 	"sheeper.com/fancaps-scraper-go/pkg/menu"
 )
 
+/* Available CLI Flags. */
 type CLIFlags struct {
 	Query  string
 	Movies bool
@@ -68,9 +69,7 @@ func ParseCLI() CLIFlags {
 	}
 }
 
-/*
-Returns initial URL to scrape based on search query, `CLIFlags.Query`.
-*/
+/* Returns initial URL to scrape based on search query, `CLIFlags.Query`. */
 func (f CLIFlags) BuildQueryURL() string {
 	params := url.Values{}
 	params.Add("q", f.Query)
@@ -89,6 +88,7 @@ func (f CLIFlags) BuildQueryURL() string {
 	return baseURL + "?" + params.Encode()
 }
 
+/* Prompt user for a search query to scrape titles from. */
 func getSearchQuery() string {
 	fmt.Print("Enter Search Query: ")
 	scanner := bufio.NewScanner(os.Stdin)
