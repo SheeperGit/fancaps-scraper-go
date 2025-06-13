@@ -28,12 +28,14 @@ func main() {
 			Note: Movies do not have episodes and thus do not require episode scraping.
 		*/
 		switch titles[i].Category {
-		case menu.CategoryTV:
-			titles[i].Episodes = titles[i].GetTVEpisodes()
 		case menu.CategoryAnime:
 			titles[i].Episodes = titles[i].GetAnimeEpisodes()
+		case menu.CategoryTV:
+			titles[i].Episodes = titles[i].GetTVEpisodes()
+		case menu.CategoryMovie:
+			// Do nothing
 		default:
-			fmt.Fprintf(os.Stderr, "Unknown Category: %s", titles[i].Category)
+			fmt.Fprintf(os.Stderr, "Unknown Category: %s (%s) -> [%s]\n", titles[i].Name, titles[i].Link, titles[i].Category)
 		}
 	}
 
