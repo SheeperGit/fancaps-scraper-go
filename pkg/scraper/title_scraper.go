@@ -38,7 +38,7 @@ func GetTitles(searchURL string) []Title {
 
 	/* Before making a request, print "Visiting: <URL>" */
 	c.OnRequest(func(req *colly.Request) {
-		fmt.Println("Visiting:", req.URL.String())
+		fmt.Println("Visiting Search URL:", req.URL.String())
 	})
 
 	/* Start the collector. */

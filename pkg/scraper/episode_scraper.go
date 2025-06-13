@@ -47,7 +47,7 @@ func (title Title) GetTVEpisodes() []Episode {
 
 	/* Before making a request, print "Visiting: <URL>" */
 	c.OnRequest(func(req *colly.Request) {
-		fmt.Println("Visiting:", req.URL.String())
+		fmt.Println("Visiting TV Episode URL:", req.URL.String())
 	})
 
 	/* Start the collector on the title. */
@@ -87,7 +87,7 @@ func (title Title) GetAnimeEpisodes() []Episode {
 
 	/* Before making a request, print "Visiting: <URL>" */
 	c.OnRequest(func(req *colly.Request) {
-		fmt.Println("Visiting:", req.URL.String())
+		fmt.Println("Visiting Anime Episode URL:", req.URL.String())
 	})
 
 	/* Start the collector on the title. */
