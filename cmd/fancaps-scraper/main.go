@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"sheeper.com/fancaps-scraper-go/pkg/cli"
+	"sheeper.com/fancaps-scraper-go/pkg/menu"
 	"sheeper.com/fancaps-scraper-go/pkg/scraper"
 )
 
@@ -21,7 +23,18 @@ func main() {
 
 	/* Get the episodes for each title. */
 	for i := range titles {
-		titles[i].Episodes = titles[i].GetEpisodes()
+		/*
+			From title category, run corresponding episode scraper.
+			Note: Movies do not have episodes and thus do not require episode scraping.
+		*/
+		switch titles[i].Category {
+		case menu.CategoryTV:
+			titles[i].Episodes = titles[i].GetTVEpisodes()
+		case menu.CategoryAnime:
+			titles[i].Episodes = titles[i].GetAnimeEpisodes()
+		default:
+			fmt.Fprintf(os.Stderr, "Unknown Category: %s", titles[i].Category)
+		}
 	}
 
 	/* Debug: Print found titles and episodes. */
