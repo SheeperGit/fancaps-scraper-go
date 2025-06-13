@@ -95,6 +95,7 @@ type model struct {
 	choices    []Category
 	selected   map[Category]struct{}
 	confirmed  bool
+	errMsg     string
 }
 
 /* Initializes the model. */
@@ -164,7 +165,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.confirmed = true
 				return m, tea.Quit
 			} else {
-				fmt.Printf("Select at least one category.")
+				m.errMsg = "You must select at least one category."
 			}
 		case key.Matches(msg, m.keys.Help):
 			m.help.ShowAll = !m.help.ShowAll
@@ -180,6 +181,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 /* Menu Styles. */
 var highlightStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("212"))
+var errMsgStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("1"))
 
 /* Renders the UI based on the data in the model, `model`. */
 func (m model) View() string {
@@ -201,6 +203,10 @@ func (m model) View() string {
 			line = highlightStyle.Render(line)
 		}
 		s += line + "\n"
+	}
+
+	if m.errMsg != "" {
+		s += "\n" + errMsgStyle.Render(m.errMsg) + "\n"
 	}
 
 	s += "\n" + m.help.View(m.keys) + "\n"
