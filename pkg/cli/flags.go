@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"sheeper.com/fancaps-scraper-go/pkg/menu"
+	"sheeper.com/fancaps-scraper-go/pkg/types"
 )
 
 /* Available CLI Flags. */
@@ -51,11 +52,11 @@ func ParseCLI() CLIFlags {
 		/* Set active categories according to Category Menu. */
 		for cat := range selectedMenuCategories {
 			switch cat {
-			case menu.CategoryMovie:
+			case types.CategoryMovie:
 				*movies = true
-			case menu.CategoryTV:
+			case types.CategoryTV:
 				*tv = true
-			case menu.CategoryAnime:
+			case types.CategoryAnime:
 				*anime = true
 			}
 		}

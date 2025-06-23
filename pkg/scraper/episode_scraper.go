@@ -5,17 +5,12 @@ import (
 	"regexp"
 
 	"github.com/gocolly/colly"
+	"sheeper.com/fancaps-scraper-go/pkg/types"
 )
 
-/* An episode of a title. */
-type Episode struct {
-	Name string
-	Link string
-}
-
 /* Given a TV series title `title`, return its list of episodes. */
-func (title Title) GetTVEpisodes() []Episode {
-	var episodes []Episode
+func GetTVEpisodes(title types.Title) []types.Episode {
+	var episodes []types.Episode
 
 	/* Create a Collector for FanCaps. */
 	c := colly.NewCollector(
@@ -27,7 +22,7 @@ func (title Title) GetTVEpisodes() []Episode {
 	*/
 	c.OnHTML("h3 > a[href]", func(e *colly.HTMLElement) {
 		link := e.Request.AbsoluteURL(e.Attr("href"))
-		episode := Episode{
+		episode := types.Episode{
 			Name: getEpisodeTitle(e.Text),
 			Link: link,
 		}
@@ -57,8 +52,8 @@ func (title Title) GetTVEpisodes() []Episode {
 }
 
 /* Given an Anime title `title`, return its list of episodes. */
-func (title Title) GetAnimeEpisodes() []Episode {
-	var episodes []Episode
+func GetAnimeEpisodes(title types.Title) []types.Episode {
+	var episodes []types.Episode
 
 	/* Create a Collector for FanCaps. */
 	c := colly.NewCollector(
@@ -69,7 +64,7 @@ func (title Title) GetAnimeEpisodes() []Episode {
 	c.OnHTML("a[href] > h3", func(e *colly.HTMLElement) {
 		href, _ := e.DOM.Parent().Attr("href")
 		link := e.Request.AbsoluteURL(href)
-		episode := Episode{
+		episode := types.Episode{
 			Name: getEpisodeTitle(e.Text),
 			Link: link,
 		}

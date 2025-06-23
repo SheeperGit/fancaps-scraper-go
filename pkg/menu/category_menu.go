@@ -8,9 +8,10 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"sheeper.com/fancaps-scraper-go/pkg/types"
 )
 
-type keyMap struct {
+type catKeyMap struct {
 	Up        key.Binding
 	Down      key.Binding
 	Toggle    key.Binding
@@ -21,19 +22,19 @@ type keyMap struct {
 }
 
 /* Keybindings to be shown in the mini-help view. */
-func (k keyMap) ShortHelp() []key.Binding {
+func (k catKeyMap) ShortHelp() []key.Binding {
 	return []key.Binding{k.Help, k.Quit}
 }
 
 /* Keybindings to be shown in the expanded-help view. */
-func (k keyMap) FullHelp() [][]key.Binding {
+func (k catKeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.Toggle, k.ToggleAll, k.Confirm}, // First Column
 		{k.Help, k.Quit}, // Second Column
 	}
 }
 
-var keys = keyMap{
+var categoryKeys = catKeyMap{
 	Up: key.NewBinding(
 		key.WithKeys("up", "w", "k"),
 		key.WithHelp("↑/w/k", "move up"),
@@ -64,61 +65,41 @@ var keys = keyMap{
 	),
 }
 
-/* Enum for Categories. */
-type Category int
-
-const (
-	CategoryMovie Category = iota
-	CategoryTV
-	CategoryAnime
-	CategoryUnknown
-)
-
-var CategoryName = map[Category]string{
-	CategoryMovie:   "Movies",
-	CategoryTV:      "TV Series",
-	CategoryAnime:   "Anime",
-	CategoryUnknown: "Category Unknown",
-}
-
-/* Convert a category enumeration to its corresponding string representation. */
-func (cat Category) String() string {
-	return CategoryName[cat]
-}
-
-/* Menu Model. */
-type model struct {
-	keys       keyMap
+/* Category Menu Model. */
+type categoryModel struct {
+	keys       catKeyMap
 	help       help.Model
 	inputStyle lipgloss.Style
 	cursor     int
-	choices    []Category
-	selected   map[Category]struct{}
+	choices    []types.Category
+	selected   map[types.Category]struct{}
 	confirmed  bool
 	errMsg     string
 }
 
-/* Initializes the model. */
-func initialModel() model {
-	return model{
-		keys:       keys,
+/* Initializes the category model. */
+func initialCategoryModel() categoryModel {
+	return categoryModel{
+		keys:       categoryKeys,
 		help:       help.New(),
-		inputStyle: lipgloss.NewStyle().Foreground(lipgloss.Color("#FF75B7")),
-		choices:    []Category{CategoryMovie, CategoryTV, CategoryAnime},
-		selected:   make(map[Category]struct{}),
+		inputStyle: inputStyle,
+		choices: []types.Category{
+			types.CategoryMovie, types.CategoryTV, types.CategoryAnime,
+		},
+		selected: make(map[types.Category]struct{}),
 	}
 }
 
 /*
 Returns an initial command for the application to run.
-In this case, sets a suitable window title.
+In this case, sets a suitable window title for the category model.
 */
-func (m model) Init() tea.Cmd {
+func (m categoryModel) Init() tea.Cmd {
 	return tea.SetWindowTitle("Fancaps-Scraper-Go Category Picker")
 }
 
-/* Handles incoming events and updates the model `model` accordingly. */
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+/* Handles incoming events and updates the model `m` accordingly. */
+func (m categoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		/* Truncate help menu width based on message width. */
@@ -127,13 +108,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, m.keys.Up):
-			if m.cursor > 0 {
-				m.cursor--
-			}
+			m.setCursorWrapUp()
 		case key.Matches(msg, m.keys.Down):
-			if m.cursor < len(m.choices)-1 {
-				m.cursor++
-			}
+			m.setCursorWrapDown()
 		case key.Matches(msg, m.keys.Toggle):
 			choice := m.choices[m.cursor]
 			_, ok := m.selected[choice]
@@ -160,7 +137,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case key.Matches(msg, m.keys.Confirm):
 			/* Must select at least one category. */
-			// TODO: Message that selection must be non-empty.
 			if len(m.selected) != 0 {
 				m.confirmed = true
 				return m, tea.Quit
@@ -179,12 +155,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-/* Menu Styles. */
-var highlightStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("212"))
-var errMsgStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("1"))
-
-/* Renders the UI based on the data in the model, `model`. */
-func (m model) View() string {
+/* Renders the UI based on the data in the model, `m`. */
+func (m categoryModel) View() string {
 	s := "Select Categories to Scrape from:\n\n"
 
 	for i, choice := range m.choices {
@@ -218,17 +190,41 @@ func (m model) View() string {
 Launch the Category Menu.
 Returns selected categories and whether the user confirmed their choice.
 */
-func GetCategoriesMenu() (map[Category]struct{}, bool) {
-	p := tea.NewProgram(initialModel())
+func GetCategoriesMenu() (map[types.Category]struct{}, bool) {
+	p := tea.NewProgram(initialCategoryModel())
 	if m, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Category Menu has encountered an error: %v", err)
 		os.Exit(1)
 	} else {
-		m, ok := m.(model)
+		m, ok := m.(categoryModel)
 		if ok {
 			return m.selected, m.confirmed
 		}
 	}
 
-	return map[Category]struct{}{}, false
+	return map[types.Category]struct{}{}, false
+}
+
+/*
+Set the cursor of model `m` to either move up,
+or wrap-around to the end of the list of choices.
+*/
+func (m *categoryModel) setCursorWrapUp() {
+	if m.cursor <= 0 {
+		m.cursor = len(m.choices) - 1
+	} else {
+		m.cursor--
+	}
+}
+
+/*
+Set the cursor of model `m` to either move down,
+or wrap-around to the beginning of the list of choices.
+*/
+func (m *categoryModel) setCursorWrapDown() {
+	if m.cursor >= len(m.choices)-1 {
+		m.cursor = 0
+	} else {
+		m.cursor++
+	}
 }

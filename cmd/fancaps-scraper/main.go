@@ -5,8 +5,8 @@ import (
 	"os"
 
 	"sheeper.com/fancaps-scraper-go/pkg/cli"
-	"sheeper.com/fancaps-scraper-go/pkg/menu"
 	"sheeper.com/fancaps-scraper-go/pkg/scraper"
+	"sheeper.com/fancaps-scraper-go/pkg/types"
 )
 
 func main() {
@@ -20,6 +20,7 @@ func main() {
 	for _, t := range titles {
 		fmt.Println(t.Name, t.Link)
 	}
+	fmt.Println()
 
 	/* Get the episodes for each title. */
 	for i := range titles {
@@ -28,11 +29,11 @@ func main() {
 			Note: Movies do not have episodes and thus do not require episode scraping.
 		*/
 		switch titles[i].Category {
-		case menu.CategoryAnime:
-			titles[i].Episodes = titles[i].GetAnimeEpisodes()
-		case menu.CategoryTV:
-			titles[i].Episodes = titles[i].GetTVEpisodes()
-		case menu.CategoryMovie:
+		case types.CategoryAnime:
+			titles[i].Episodes = scraper.GetAnimeEpisodes(titles[i])
+		case types.CategoryTV:
+			titles[i].Episodes = scraper.GetTVEpisodes(titles[i])
+		case types.CategoryMovie:
 			// Do nothing
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown Category: %s (%s) -> [%s]\n", titles[i].Name, titles[i].Link, titles[i].Category)
@@ -40,7 +41,7 @@ func main() {
 	}
 
 	/* Debug: Print found titles and episodes. */
-	fmt.Println("FULL INFO:")
+	fmt.Println("\nFULL INFO:")
 	for _, title := range titles {
 		fmt.Printf("%s [%s] -> %s\n", title.Name, title.Category, title.Link)
 		for _, episode := range title.Episodes {

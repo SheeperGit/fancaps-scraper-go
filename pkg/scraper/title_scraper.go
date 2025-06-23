@@ -5,20 +5,12 @@ import (
 	"strings"
 
 	"github.com/gocolly/colly"
-	"sheeper.com/fancaps-scraper-go/pkg/menu"
+	"sheeper.com/fancaps-scraper-go/pkg/types"
 )
 
-/* Full information about a Movie, TV Series, or Anime title. */
-type Title struct {
-	Category menu.Category
-	Episodes []Episode
-	Name     string
-	Link     string
-}
-
 /* Given a URL `searchURL`, return all titles found by FanCaps. */
-func GetTitles(searchURL string) []Title {
-	var titles []Title
+func GetTitles(searchURL string) []types.Title {
+	var titles []types.Title
 
 	/* Create a Collector for FanCaps. */
 	c := colly.NewCollector(
@@ -28,7 +20,7 @@ func GetTitles(searchURL string) []Title {
 	/* Extract the title's name and link. */
 	c.OnHTML("h4 > a", func(e *colly.HTMLElement) {
 		link := e.Request.AbsoluteURL(e.Attr("href"))
-		title := Title{
+		title := types.Title{
 			Category: getCategory(link),
 			Name:     e.Text,
 			Link:     link,
@@ -48,15 +40,15 @@ func GetTitles(searchURL string) []Title {
 }
 
 /* Return the category of a title based on its URL, `url`. */
-func getCategory(url string) menu.Category {
+func getCategory(url string) types.Category {
 	switch {
 	case strings.Contains(url, "/movies/"):
-		return menu.CategoryMovie
+		return types.CategoryMovie
 	case strings.Contains(url, "/tv/"):
-		return menu.CategoryTV
+		return types.CategoryTV
 	case strings.Contains(url, "/anime/"):
-		return menu.CategoryAnime
+		return types.CategoryAnime
 	default:
-		return menu.CategoryUnknown
+		return types.CategoryUnknown
 	}
 }
