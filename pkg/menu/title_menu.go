@@ -160,11 +160,13 @@ func (m titleModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 var (
 	inactiveTabBorder = tabBorderWithBottom("┴", "─", "┴")
 	activeTabBorder   = tabBorderWithBottom("┘", " ", "└")
+	singleTabBorder   = tabBorderWithBottom("│", " ", "│")
 	docStyle          = lipgloss.NewStyle().Padding(1, 2, 1, 2)
 	highlightColor    = lipgloss.AdaptiveColor{Light: "#874BFD", Dark: "#7D56F4"}
 	inactiveTabStyle  = lipgloss.NewStyle().Border(inactiveTabBorder, true).BorderForeground(highlightColor).Padding(0, 1).Align(lipgloss.Center)
 	activeTabStyle    = inactiveTabStyle.Border(activeTabBorder, true)
-	windowStyle       = lipgloss.NewStyle().BorderForeground(highlightColor).Padding(2, 0).Align(lipgloss.Center).Border(lipgloss.NormalBorder()).UnsetBorderTop()
+	singleTabStyle    = inactiveTabStyle.Border(singleTabBorder, true)
+	windowStyle       = lipgloss.NewStyle().BorderForeground(highlightColor).Padding(2, 0).Border(lipgloss.NormalBorder()).UnsetBorderTop()
 )
 
 /* Renders the UI based on the data in the title model, `m`. */
@@ -173,34 +175,42 @@ func (m titleModel) View() string {
 	var renderedTabs []string
 
 	longestContent := getLongestTitleString(m.choices)
+	content, spaces := m.getTitleMenuContent(longestContent)
 
 	for i, t := range m.Tabs {
 		var style lipgloss.Style
 
-		contentWidth := lipgloss.Width(windowStyle.Render(longestContent)) - windowStyle.GetHorizontalPadding()
+		contentWidth := lipgloss.Width(windowStyle.Render(longestContent)) - windowStyle.GetHorizontalPadding() + spaces
 		tabCount := len(m.Tabs)
 		tabWidth := contentWidth / tabCount
 
 		isFirst, isLast, isActive := i == 0, i == tabCount-1, i == int(m.activeTab)
 
-		if isActive {
+		if tabCount == 1 {
+			style = singleTabStyle
+
+		} else if isActive {
 			style = activeTabStyle
 		} else {
 			style = inactiveTabStyle
 		}
 
-		border, _, _, _, _ := style.GetBorder()
-		if isFirst && isActive {
-			border.BottomLeft = "│"
-		} else if isFirst && !isActive {
-			border.BottomLeft = "├"
-		} else if isLast && isActive {
-			border.BottomRight = "│"
-		} else if isLast && !isActive {
-			border.BottomRight = "┤"
+		if tabCount > 1 {
+			border, _, _, _, _ := style.GetBorder()
+			if isFirst && isActive {
+				border.BottomLeft = "│"
+			} else if isFirst && !isActive {
+				border.BottomLeft = "├"
+			} else if isLast && isActive {
+				border.BottomRight = "│"
+			} else if isLast && !isActive {
+				border.BottomRight = "┤"
+			}
+			style = style.Border(border)
 		}
 
-		style = style.Border(border).Width(tabWidth)
+		style = style.Width(tabWidth)
+
 		renderedTabs = append(renderedTabs, style.Render(t.String()))
 	}
 
@@ -215,13 +225,19 @@ func (m titleModel) View() string {
 
 	belowMenuContent += "\n" + m.help.View(m.keys) + "\n"
 	// windowStyle.Height()	// IMPORTANT
-	doc.WriteString(windowStyle.Width((lipgloss.Width(row) - windowStyle.GetHorizontalFrameSize())).Render(m.getTitleMenuContent()))
+	doc.WriteString(windowStyle.Width((lipgloss.Width(row) - windowStyle.GetHorizontalFrameSize())).Render(content))
 	doc.WriteString(belowMenuContent)
 	return docStyle.Render(doc.String())
 }
 
-func (m titleModel) getTitleMenuContent() string {
+/*
+Returns the content to render in the Title menu,
+as well as the number of extra characters that do not pertain
+to the longest title/episode name (used in Tab width calculation).
+*/
+func (m titleModel) getTitleMenuContent(longestName string) (string, int) {
 	var titleContent string
+	var extraChars int
 
 	for i, choice := range m.choices {
 		cursor := " "
@@ -235,13 +251,16 @@ func (m titleModel) getTitleMenuContent() string {
 		}
 
 		line := fmt.Sprintf("%s [%s] %s", cursor, checked, choice.Name)
+		if longestName == choice.Name {
+			extraChars = len(line) - len(longestName)
+		}
 		if m.cursor == i {
 			line = highlightStyle.Render(line)
 		}
 		titleContent += line + "\n"
 	}
 
-	return titleContent
+	return titleContent, extraChars
 }
 
 /*
