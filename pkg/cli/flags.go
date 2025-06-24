@@ -102,3 +102,19 @@ func getSearchQuery() string {
 
 	return ""
 }
+
+/* Extracts the selected categories from `flags`. */
+func (flags CLIFlags) GetSelectedCategories() []types.Category {
+	var categories []types.Category
+	if flags.Movies {
+		categories = append(categories, types.CategoryMovie)
+	}
+	if flags.TV {
+		categories = append(categories, types.CategoryTV)
+	}
+	if flags.Anime {
+		categories = append(categories, types.CategoryAnime)
+	}
+
+	return categories
+}

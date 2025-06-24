@@ -50,7 +50,8 @@ func main() {
 		}
 	}
 
-	selectedTitles, confirmed := menu.GetTitleMenu(titles)
+	selectedCategories := flags.GetSelectedCategories()
+	selectedTitles, confirmed := menu.GetTitleMenu(titles, selectedCategories)
 	if !confirmed {
 		fmt.Fprintf(os.Stderr, "Title Menu: Operation aborted.\n")
 		os.Exit(1)

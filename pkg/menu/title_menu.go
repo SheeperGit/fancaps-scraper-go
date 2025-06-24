@@ -94,13 +94,9 @@ type titleModel struct {
 }
 
 /* Initializes the title model. */
-func initialTitleModel(titles []types.Title) titleModel {
+func initialTitleModel(titles []types.Title, tabs []types.Category) titleModel {
 	return titleModel{
-		Tabs: []types.Category{
-			types.CategoryMovie,
-			types.CategoryTV,
-			types.CategoryAnime,
-		},
+		Tabs:       tabs,
 		TabContent: []types.Title{},
 		keys:       titleKeys,
 		help:       help.New(),
@@ -218,7 +214,7 @@ func (m titleModel) View() string {
 	}
 
 	belowMenuContent += "\n" + m.help.View(m.keys) + "\n"
-
+	// windowStyle.Height()	// IMPORTANT
 	doc.WriteString(windowStyle.Width((lipgloss.Width(row) - windowStyle.GetHorizontalFrameSize())).Render(m.getTitleMenuContent()))
 	doc.WriteString(belowMenuContent)
 	return docStyle.Render(doc.String())
@@ -284,8 +280,8 @@ func containsTitle(titles []types.Title, t types.Title) bool {
 Launch the Title/Episode Menu.
 Returns selected titles/episodes and whether the user confirmed their choice.
 */
-func GetTitleMenu(titles []types.Title) ([]types.Title, bool) {
-	p := tea.NewProgram(initialTitleModel(titles))
+func GetTitleMenu(titles []types.Title, tabs []types.Category) ([]types.Title, bool) {
+	p := tea.NewProgram(initialTitleModel(titles, tabs))
 	if m, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Title Menu has encountered an error: %v", err)
 		os.Exit(1)
