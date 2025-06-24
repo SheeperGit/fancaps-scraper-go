@@ -141,7 +141,7 @@ func (m categoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			/* Must select at least one category. */
 			if len(m.selected) != 0 {
 				m.confirmed = true
-				return m, tea.Quit
+				return m, m.resetWindowTitleAndQuit()
 			} else {
 				m.errMsg = "You must select at least one category."
 			}
@@ -149,7 +149,7 @@ func (m categoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.help.ShowAll = !m.help.ShowAll
 		case key.Matches(msg, m.keys.Quit):
 			m.confirmed = false
-			return m, tea.Quit
+			return m, m.resetWindowTitleAndQuit()
 		}
 
 	}
@@ -229,4 +229,11 @@ func (m *categoryModel) setCursorWrapDown() {
 	} else {
 		m.cursor++
 	}
+}
+
+func (m categoryModel) resetWindowTitleAndQuit() tea.Cmd {
+	return tea.Sequence(
+		tea.SetWindowTitle(""),
+		tea.Quit,
+	)
 }

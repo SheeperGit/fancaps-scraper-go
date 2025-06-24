@@ -140,7 +140,7 @@ func (m titleModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			/* Must select at least one title/episode. */
 			if len(m.selected) != 0 {
 				m.confirmed = true
-				return m, tea.Quit
+				return m, m.resetWindowTitleAndQuit()
 			} else {
 				m.errMsg = "You must select at least one title/episode."
 			}
@@ -148,9 +148,8 @@ func (m titleModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.help.ShowAll = !m.help.ShowAll
 		case key.Matches(msg, m.keys.Quit):
 			m.confirmed = false
-			return m, tea.Quit
+			return m, m.resetWindowTitleAndQuit()
 		}
-
 	}
 
 	return m, nil
@@ -176,6 +175,7 @@ func (m titleModel) View() string {
 
 	longestContent := getLongestTitleString(m.choices)
 	content, spaces := m.getTitleMenuContent(longestContent)
+	menuHeight := strings.Count(content, "\n")
 
 	for i, t := range m.Tabs {
 		var style lipgloss.Style
@@ -188,7 +188,6 @@ func (m titleModel) View() string {
 
 		if tabCount == 1 {
 			style = singleTabStyle
-
 		} else if isActive {
 			style = activeTabStyle
 		} else {
@@ -218,14 +217,15 @@ func (m titleModel) View() string {
 	doc.WriteString(row)
 	doc.WriteString("\n")
 
+	menuWidth := lipgloss.Width(row) - windowStyle.GetHorizontalFrameSize()
+
 	belowMenuContent := ""
 	if m.errMsg != "" {
 		belowMenuContent += "\n" + errMsgStyle.Render(m.errMsg) + "\n"
 	}
-
 	belowMenuContent += "\n" + m.help.View(m.keys) + "\n"
-	// windowStyle.Height()	// IMPORTANT
-	doc.WriteString(windowStyle.Width((lipgloss.Width(row) - windowStyle.GetHorizontalFrameSize())).Render(content))
+
+	doc.WriteString(windowStyle.Width(menuWidth).Height(menuHeight).Render(content))
 	doc.WriteString(belowMenuContent)
 	return docStyle.Render(doc.String())
 }
@@ -393,4 +393,12 @@ func tabBorderWithBottom(left, middle, right string) lipgloss.Border {
 	border.Bottom = middle
 	border.BottomRight = right
 	return border
+}
+
+/* Returns a command that resets the window title and quits the menu. */
+func (m titleModel) resetWindowTitleAndQuit() tea.Cmd {
+	return tea.Sequence(
+		tea.SetWindowTitle(""),
+		tea.Quit,
+	)
 }
