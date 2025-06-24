@@ -254,10 +254,16 @@ func (m titleModel) getTitleMenuContent(longestName string) (string, int) {
 		if longestName == choice.Name {
 			extraChars = len(line) - len(longestName)
 		}
-		if m.cursor == i {
-			line = highlightStyle.Render(line)
+
+		style := lipgloss.NewStyle()
+		if checked == "x" {
+			style = style.Inherit(selectedStyle)
 		}
-		titleContent += line + "\n"
+		if m.cursor == i {
+			style = style.Inherit(highlightStyle)
+		}
+
+		titleContent += style.Render(line) + "\n"
 	}
 
 	return titleContent, extraChars

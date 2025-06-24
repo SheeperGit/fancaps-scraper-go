@@ -21,6 +21,7 @@ import (
 var (
 	inputStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF75B7"))
 	highlightStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("212"))
+	selectedStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
 	errMsgStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("1"))
 )
 

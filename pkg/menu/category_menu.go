@@ -173,10 +173,16 @@ func (m categoryModel) View() string {
 		}
 
 		line := fmt.Sprintf("%s [%s] %s", cursor, checked, choice)
-		if m.cursor == i {
-			line = highlightStyle.Render(line)
+
+		style := lipgloss.NewStyle()
+		if checked == "x" {
+			style = style.Inherit(selectedStyle)
 		}
-		s += line + "\n"
+		if m.cursor == i {
+			style = style.Inherit(highlightStyle)
+		}
+
+		s += style.Render(line) + "\n"
 	}
 
 	if m.errMsg != "" {
