@@ -11,6 +11,7 @@ import (
 	"sheeper.com/fancaps-scraper-go/pkg/types"
 )
 
+/* Category Menu KeyMap. */
 type catKeyMap struct {
 	Up        key.Binding
 	Down      key.Binding
@@ -34,6 +35,7 @@ func (k catKeyMap) FullHelp() [][]key.Binding {
 	}
 }
 
+/* Keybinds for the Category Menu. */
 var categoryKeys = catKeyMap{
 	Up: key.NewBinding(
 		key.WithKeys("up", "w", "k"),

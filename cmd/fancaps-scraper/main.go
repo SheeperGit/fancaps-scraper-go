@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"sheeper.com/fancaps-scraper-go/pkg/cli"
+	"sheeper.com/fancaps-scraper-go/pkg/menu"
 	"sheeper.com/fancaps-scraper-go/pkg/scraper"
 	"sheeper.com/fancaps-scraper-go/pkg/types"
 )
@@ -16,7 +17,7 @@ func main() {
 	titles := scraper.GetTitles(searchURL)
 
 	/* Debug: Print found titles. */
-	fmt.Println("Found Titles:")
+	fmt.Println("FOUND TITLES:")
 	for _, t := range titles {
 		fmt.Println(t.Name, t.Link)
 	}
@@ -41,8 +42,23 @@ func main() {
 	}
 
 	/* Debug: Print found titles and episodes. */
-	fmt.Println("\nFULL INFO:")
+	fmt.Println("\nFOUND TITLES AND EPISODES:")
 	for _, title := range titles {
+		fmt.Printf("%s [%s] -> %s\n", title.Name, title.Category, title.Link)
+		for _, episode := range title.Episodes {
+			fmt.Printf("\t%s -> %s\n", episode.Name, episode.Link)
+		}
+	}
+
+	selectedTitles, confirmed := menu.GetTitleMenu(titles)
+	if !confirmed {
+		fmt.Fprintf(os.Stderr, "Title Menu: Operation aborted.\n")
+		os.Exit(1)
+	}
+
+	/* Debug: Print selected titles and episodes. */
+	fmt.Println("\nSELECTED TITLES AND EPISODES:")
+	for _, title := range selectedTitles {
 		fmt.Printf("%s [%s] -> %s\n", title.Name, title.Category, title.Link)
 		for _, episode := range title.Episodes {
 			fmt.Printf("\t%s -> %s\n", episode.Name, episode.Link)

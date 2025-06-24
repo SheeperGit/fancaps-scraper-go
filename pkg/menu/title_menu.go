@@ -12,17 +12,7 @@ import (
 	"sheeper.com/fancaps-scraper-go/pkg/types"
 )
 
-/* Title Model Style. */
-var (
-	inactiveTabBorder = tabBorderWithBottom("┴", "─", "┴")
-	activeTabBorder   = tabBorderWithBottom("┘", " ", "└")
-	docStyle          = lipgloss.NewStyle().Padding(1, 2, 1, 2)
-	highlightColor    = lipgloss.AdaptiveColor{Light: "#874BFD", Dark: "#7D56F4"}
-	inactiveTabStyle  = lipgloss.NewStyle().Border(inactiveTabBorder, true).BorderForeground(highlightColor).Padding(0, 1)
-	activeTabStyle    = inactiveTabStyle.Border(activeTabBorder, true)
-	windowStyle       = lipgloss.NewStyle().BorderForeground(highlightColor).Padding(2, 0).Align(lipgloss.Center).Border(lipgloss.NormalBorder()).UnsetBorderTop()
-)
-
+/* Title Menu KeyMap. */
 type titleKeyMap struct {
 	Up        key.Binding
 	Down      key.Binding
@@ -48,6 +38,7 @@ func (k titleKeyMap) FullHelp() [][]key.Binding {
 	}
 }
 
+/* Keybinds for the Category Menu. */
 var titleKeys = titleKeyMap{
 	Up: key.NewBinding(
 		key.WithKeys("up", "w", "k"),
@@ -97,13 +88,13 @@ type titleModel struct {
 	inputStyle lipgloss.Style
 	cursor     int
 	choices    []types.Title
-	selected   map[*types.Title]struct{}
+	selected   []types.Title
 	confirmed  bool
 	errMsg     string
 }
 
 /* Initializes the title model. */
-func initialTitleModel() titleModel {
+func initialTitleModel(titles []types.Title) titleModel {
 	return titleModel{
 		Tabs: []types.Category{
 			types.CategoryMovie,
@@ -114,8 +105,8 @@ func initialTitleModel() titleModel {
 		keys:       titleKeys,
 		help:       help.New(),
 		inputStyle: inputStyle,
-		choices:    []types.Title{},
-		selected:   make(map[*types.Title]struct{}),
+		choices:    titles,
+		selected:   []types.Title{},
 	}
 }
 
@@ -146,28 +137,9 @@ func (m titleModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.setTabWrapRight()
 		case key.Matches(msg, m.keys.Toggle):
 			choice := m.choices[m.cursor]
-			_, ok := m.selected[&choice]
-			if ok {
-				delete(m.selected, &choice)
-			} else {
-				m.selected[&choice] = struct{}{}
-			}
+			m.toggleTitle(choice)
 		case key.Matches(msg, m.keys.ToggleAll):
-			if len(m.selected) < len(m.choices) {
-				for _, choice := range m.choices {
-					_, ok := m.selected[&choice]
-					if !ok {
-						m.selected[&choice] = struct{}{}
-					}
-				}
-			} else {
-				for _, choice := range m.choices {
-					_, ok := m.selected[&choice]
-					if ok {
-						delete(m.selected, &choice)
-					}
-				}
-			}
+			m.toggleAllTitles()
 		case key.Matches(msg, m.keys.Confirm):
 			/* Must select at least one title/episode. */
 			if len(m.selected) != 0 {
@@ -188,14 +160,32 @@ func (m titleModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+/* Title Model Style. */
+var (
+	inactiveTabBorder = tabBorderWithBottom("┴", "─", "┴")
+	activeTabBorder   = tabBorderWithBottom("┘", " ", "└")
+	docStyle          = lipgloss.NewStyle().Padding(1, 2, 1, 2)
+	highlightColor    = lipgloss.AdaptiveColor{Light: "#874BFD", Dark: "#7D56F4"}
+	inactiveTabStyle  = lipgloss.NewStyle().Border(inactiveTabBorder, true).BorderForeground(highlightColor).Padding(0, 1).Align(lipgloss.Center)
+	activeTabStyle    = inactiveTabStyle.Border(activeTabBorder, true)
+	windowStyle       = lipgloss.NewStyle().BorderForeground(highlightColor).Padding(2, 0).Align(lipgloss.Center).Border(lipgloss.NormalBorder()).UnsetBorderTop()
+)
+
 /* Renders the UI based on the data in the title model, `m`. */
 func (m titleModel) View() string {
 	doc := strings.Builder{}
 	var renderedTabs []string
 
+	longestContent := getLongestTitleString(m.choices)
+
 	for i, t := range m.Tabs {
 		var style lipgloss.Style
-		isFirst, isLast, isActive := i == 0, i == len(m.Tabs)-1, i == int(m.activeTab)
+
+		contentWidth := lipgloss.Width(windowStyle.Render(longestContent)) - windowStyle.GetHorizontalPadding()
+		tabCount := len(m.Tabs)
+		tabWidth := contentWidth / tabCount
+
+		isFirst, isLast, isActive := i == 0, i == tabCount-1, i == int(m.activeTab)
 
 		if isActive {
 			style = activeTabStyle
@@ -214,23 +204,88 @@ func (m titleModel) View() string {
 			border.BottomRight = "┤"
 		}
 
-		style = style.Border(border)
+		style = style.Border(border).Width(tabWidth)
 		renderedTabs = append(renderedTabs, style.Render(t.String()))
 	}
 
 	row := lipgloss.JoinHorizontal(lipgloss.Top, renderedTabs...)
 	doc.WriteString(row)
 	doc.WriteString("\n")
-	doc.WriteString(windowStyle.Width((lipgloss.Width(row) - windowStyle.GetHorizontalFrameSize())).Render(m.TabContent[m.activeTab].Name))
+
+	belowMenuContent := ""
+	if m.errMsg != "" {
+		belowMenuContent += "\n" + errMsgStyle.Render(m.errMsg) + "\n"
+	}
+
+	belowMenuContent += "\n" + m.help.View(m.keys) + "\n"
+
+	doc.WriteString(windowStyle.Width((lipgloss.Width(row) - windowStyle.GetHorizontalFrameSize())).Render(m.getTitleMenuContent()))
+	doc.WriteString(belowMenuContent)
 	return docStyle.Render(doc.String())
+}
+
+func (m titleModel) getTitleMenuContent() string {
+	var titleContent string
+
+	for i, choice := range m.choices {
+		cursor := " "
+		if m.cursor == i {
+			cursor = ">"
+		}
+
+		checked := " "
+		if containsTitle(m.selected, choice) {
+			checked = "x"
+		}
+
+		line := fmt.Sprintf("%s [%s] %s", cursor, checked, choice.Name)
+		if m.cursor == i {
+			line = highlightStyle.Render(line)
+		}
+		titleContent += line + "\n"
+	}
+
+	return titleContent
+}
+
+/*
+Returns the longest title or episode name from titles `titles`.
+(Useful for determining the maximum width with which to render the Title Menu.)
+*/
+func getLongestTitleString(titles []types.Title) string {
+	maxWidth := ""
+
+	for _, title := range titles {
+		if len(title.Name) > len(maxWidth) {
+			maxWidth = title.Name
+		}
+		for _, episode := range title.Episodes {
+			if len(episode.Name) > len(maxWidth) {
+				maxWidth = episode.Name
+			}
+		}
+	}
+
+	return maxWidth
+}
+
+/* Returns true, if `t` is in `titles`, and returns false otherwise. */
+func containsTitle(titles []types.Title, t types.Title) bool {
+	for _, title := range titles {
+		if title.Name == t.Name {
+			return true
+		}
+	}
+
+	return false
 }
 
 /*
 Launch the Title/Episode Menu.
 Returns selected titles/episodes and whether the user confirmed their choice.
 */
-func GetTitleMenu() (map[*types.Title]struct{}, bool) {
-	p := tea.NewProgram(initialTitleModel())
+func GetTitleMenu(titles []types.Title) ([]types.Title, bool) {
+	p := tea.NewProgram(initialTitleModel(titles))
 	if m, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Title Menu has encountered an error: %v", err)
 		os.Exit(1)
@@ -241,7 +296,32 @@ func GetTitleMenu() (map[*types.Title]struct{}, bool) {
 		}
 	}
 
-	return map[*types.Title]struct{}{}, false
+	return []types.Title{}, false
+}
+
+/*
+Adds/removes the title `title` from the selection of title model `m`.
+Uses the URL of the title to check equality.
+*/
+func (m *titleModel) toggleTitle(title types.Title) {
+	for i, t := range m.selected {
+		if t.Link == title.Link {
+			m.selected = append(m.selected[:i], m.selected[i+1:]...)
+			return
+		}
+	}
+	m.selected = append(m.selected, title)
+}
+
+/* Adds/removes all titles of title model `m`. */
+// TODO: Toggle all titles that match current activeTab (i.e., match the category tab)
+func (m *titleModel) toggleAllTitles() {
+	if len(m.selected) < len(m.choices) {
+		m.selected = make([]types.Title, len(m.choices))
+		copy(m.selected, m.choices)
+	} else {
+		m.selected = nil
+	}
 }
 
 /*
