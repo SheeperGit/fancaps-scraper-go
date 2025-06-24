@@ -93,7 +93,7 @@ func GetAnimeEpisodes(title types.Title) []types.Episode {
 
 /* Returns the episode's title. */
 func getEpisodeTitle(baseTitle string) string {
-	re := regexp.MustCompile("Images From (.+)")
+	re := regexp.MustCompile(`Images From (.+?)\s*$`)
 	episodeTitle := re.FindStringSubmatch(baseTitle)
 	if len(episodeTitle) >= 2 {
 		return episodeTitle[1]
