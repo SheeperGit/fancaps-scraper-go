@@ -19,16 +19,16 @@ type Episode struct {
 type Category int
 
 const (
-	CategoryMovie Category = iota
+	CategoryAnime Category = iota
 	CategoryTV
-	CategoryAnime
+	CategoryMovie
 	CategoryUnknown
 )
 
 var CategoryName = map[Category]string{
-	CategoryMovie:   "Movies",
-	CategoryTV:      "TV Series",
 	CategoryAnime:   "Anime",
+	CategoryTV:      "TV Series",
+	CategoryMovie:   "Movies",
 	CategoryUnknown: "Category Unknown",
 }
 

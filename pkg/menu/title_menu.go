@@ -303,9 +303,10 @@ func containsTitle(titles []types.Title, t types.Title) bool {
 
 /*
 Launch the Title/Episode Menu.
-Returns selected titles/episodes and whether the user confirmed their choice.
+Returns selected titles/episodes, or exits if the user quits.
+If `debug` is enabled, then this function prints out the selected titles/episodes.
 */
-func GetTitleMenu(titles []types.Title, tabs []types.Category) ([]types.Title, bool) {
+func LaunchTitleMenu(titles []types.Title, tabs []types.Category, debug bool) []types.Title {
 	p := tea.NewProgram(initialTitleModel(titles, tabs))
 	if m, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Title Menu has encountered an error: %v", err)
@@ -313,11 +314,27 @@ func GetTitleMenu(titles []types.Title, tabs []types.Category) ([]types.Title, b
 	} else {
 		m, ok := m.(titleModel)
 		if ok {
-			return m.selected, m.confirmed
+			/* Debug: Print selected titles and episodes. */
+			if debug {
+				fmt.Println("\nSELECTED TITLES AND EPISODES:")
+				for _, title := range m.selected {
+					fmt.Printf("%s [%s] -> %s\n", title.Name, title.Category, title.Link)
+					for _, episode := range title.Episodes {
+						fmt.Printf("\t%s -> %s\n", episode.Name, episode.Link)
+					}
+				}
+			}
+			/* User has not confirmed their selection. Exit. */
+			if !m.confirmed {
+				fmt.Fprintf(os.Stderr, "Title Menu: Operation aborted.\n")
+				os.Exit(1)
+			}
+
+			return m.selected
 		}
 	}
 
-	return []types.Title{}, false
+	return []types.Title{}
 }
 
 /*

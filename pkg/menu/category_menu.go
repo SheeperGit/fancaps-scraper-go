@@ -196,9 +196,9 @@ func (m categoryModel) View() string {
 
 /*
 Launch the Category Menu.
-Returns selected categories and whether the user confirmed their choice.
+Returns selected categories, or exits if the user quits.
 */
-func GetCategoriesMenu() (map[types.Category]struct{}, bool) {
+func LaunchCategoriesMenu() map[types.Category]struct{} {
 	p := tea.NewProgram(initialCategoryModel())
 	if m, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Category Menu has encountered an error: %v", err)
@@ -206,11 +206,16 @@ func GetCategoriesMenu() (map[types.Category]struct{}, bool) {
 	} else {
 		m, ok := m.(categoryModel)
 		if ok {
-			return m.selected, m.confirmed
+			/* User has not confirmed their selection. Exit. */
+			if !m.confirmed {
+				fmt.Fprintf(os.Stderr, "Category Menu: Operation aborted.\n")
+				os.Exit(1)
+			}
+			return m.selected
 		}
 	}
 
-	return map[types.Category]struct{}{}, false
+	return map[types.Category]struct{}{}
 }
 
 /*

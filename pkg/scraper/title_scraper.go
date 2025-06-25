@@ -5,17 +5,26 @@ import (
 	"strings"
 
 	"github.com/gocolly/colly"
+	"sheeper.com/fancaps-scraper-go/pkg/cli"
 	"sheeper.com/fancaps-scraper-go/pkg/types"
 )
 
 /* Given a URL `searchURL`, return all titles found by FanCaps. */
-func GetTitles(searchURL string) []types.Title {
+func GetTitles(searchURL string, flags cli.CLIFlags) []types.Title {
 	var titles []types.Title
 
-	/* Create a Collector for FanCaps. */
-	c := colly.NewCollector(
+	/* Base options for the scraper. */
+	scraperOpts := []func(*colly.Collector){
 		colly.AllowedDomains("fancaps.net"),
-	)
+	}
+
+	/* Enable asynchronous mode. */
+	if flags.Async {
+		scraperOpts = append(scraperOpts, colly.Async(true))
+	}
+
+	/* Create a Collector for FanCaps. */
+	c := colly.NewCollector(scraperOpts...)
 
 	/* Extract the title's name and link. */
 	c.OnHTML("h4 > a", func(e *colly.HTMLElement) {
@@ -28,13 +37,30 @@ func GetTitles(searchURL string) []types.Title {
 		titles = append(titles, title)
 	})
 
-	/* Before making a request, print "Visiting: <URL>" */
-	c.OnRequest(func(req *colly.Request) {
-		fmt.Println("Visiting Search URL:", req.URL.String())
-	})
+	/* Suppress scraper output. */
+	if flags.Quiet {
+		/* Before making a request, print "Visiting: <URL>" */
+		c.OnRequest(func(req *colly.Request) {
+			fmt.Println("Visiting Search URL:", req.URL.String())
+		})
+	}
 
 	/* Start the collector. */
 	c.Visit(searchURL)
+
+	/* Wait until all asynchronous requests are complete. */
+	if flags.Async {
+		c.Wait()
+	}
+
+	/* Debug: Print found titles. */
+	if flags.Debug {
+		fmt.Println("FOUND TITLES:")
+		for _, t := range titles {
+			fmt.Println(t.Name, t.Link)
+		}
+		fmt.Println()
+	}
 
 	return titles
 }

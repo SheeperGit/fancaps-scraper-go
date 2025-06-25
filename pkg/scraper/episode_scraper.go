@@ -2,24 +2,83 @@ package scraper
 
 import (
 	"fmt"
+	"os"
 	"regexp"
+	"sync"
 
 	"github.com/gocolly/colly"
+	"sheeper.com/fancaps-scraper-go/pkg/cli"
 	"sheeper.com/fancaps-scraper-go/pkg/types"
 )
 
+/* Get episodes from titles `titles`. */
+func GetEpisodes(titles []types.Title, flags cli.CLIFlags) {
+	var wg sync.WaitGroup
+
+	/* Get the episodes for each title. */
+	for i := range titles {
+		/*
+			From title category, run corresponding episode scraper.
+			Note: Movies do not have episodes and thus do not require episode scraping.
+		*/
+		scrapeEpisodes := func(i int) {
+			switch titles[i].Category {
+			case types.CategoryAnime:
+				titles[i].Episodes = GetAnimeEpisodes(titles[i], flags)
+			case types.CategoryTV:
+				titles[i].Episodes = GetTVEpisodes(titles[i], flags)
+			case types.CategoryMovie:
+				// Do nothing
+			default:
+				fmt.Fprintf(os.Stderr, "Unknown Category: %s (%s) -> [%s]\n", titles[i].Name, titles[i].Link, titles[i].Category)
+			}
+		}
+
+		if flags.Async {
+			wg.Add(1)
+			go func(i int) {
+				defer wg.Done()
+				scrapeEpisodes(i)
+			}(i)
+		} else {
+			scrapeEpisodes(i)
+		}
+	}
+
+	if flags.Async {
+		wg.Wait()
+	}
+
+	/* Debug: Print found titles and episodes. */
+	if flags.Debug {
+		fmt.Println("\nFOUND TITLES AND EPISODES:")
+		for _, title := range titles {
+			fmt.Printf("%s [%s] -> %s\n", title.Name, title.Category, title.Link)
+			for _, episode := range title.Episodes {
+				fmt.Printf("\t%s -> %s\n", episode.Name, episode.Link)
+			}
+		}
+	}
+}
+
 /* Given a TV series title `title`, return its list of episodes. */
-func GetTVEpisodes(title types.Title) []types.Episode {
+func GetTVEpisodes(title types.Title, flags cli.CLIFlags) []types.Episode {
 	var episodes []types.Episode
 
-	/* Create a Collector for FanCaps. */
-	c := colly.NewCollector(
+	/* Base options for the scraper. */
+	scraperOpts := []func(*colly.Collector){
 		colly.AllowedDomains("fancaps.net"),
-	)
+	}
 
-	/*
-		Extract the episode's name and link. (TV-only)
-	*/
+	/* Enable asynchronous mode. */
+	if flags.Async {
+		scraperOpts = append(scraperOpts, colly.Async(true))
+	}
+
+	/* Create a Collector for FanCaps. */
+	c := colly.NewCollector(scraperOpts...)
+
+	/* Extract the episode's name and link. (TV-only) */
 	c.OnHTML("h3 > a[href]", func(e *colly.HTMLElement) {
 		link := e.Request.AbsoluteURL(e.Attr("href"))
 		episode := types.Episode{
@@ -40,25 +99,40 @@ func GetTVEpisodes(title types.Title) []types.Episode {
 		}
 	})
 
-	/* Before making a request, print "Visiting: <URL>" */
-	c.OnRequest(func(req *colly.Request) {
-		fmt.Println("Visiting TV Episode URL:", req.URL.String())
-	})
+	/* Suppress scraper output. */
+	if !flags.Quiet {
+		c.OnRequest(func(req *colly.Request) {
+			fmt.Println("Visiting TV Episode URL:", req.URL.String())
+		})
+	}
 
 	/* Start the collector on the title. */
 	c.Visit(title.Link)
+
+	/* Wait until all asynchronous requests are complete. */
+	if flags.Async {
+		c.Wait()
+	}
 
 	return episodes
 }
 
 /* Given an Anime title `title`, return its list of episodes. */
-func GetAnimeEpisodes(title types.Title) []types.Episode {
+func GetAnimeEpisodes(title types.Title, flags cli.CLIFlags) []types.Episode {
 	var episodes []types.Episode
 
-	/* Create a Collector for FanCaps. */
-	c := colly.NewCollector(
+	/* Base options for the scraper. */
+	scraperOpts := []func(*colly.Collector){
 		colly.AllowedDomains("fancaps.net"),
-	)
+	}
+
+	/* Enable asynchronous mode. */
+	if flags.Async {
+		scraperOpts = append(scraperOpts, colly.Async(true))
+	}
+
+	/* Create a Collector for FanCaps. */
+	c := colly.NewCollector(scraperOpts...)
 
 	/* Extract the episode's name and link. (Anime-only) */
 	c.OnHTML("a[href] > h3", func(e *colly.HTMLElement) {
@@ -80,13 +154,20 @@ func GetAnimeEpisodes(title types.Title) []types.Episode {
 		c.Visit(nextPageURL)
 	})
 
-	/* Before making a request, print "Visiting: <URL>" */
-	c.OnRequest(func(req *colly.Request) {
-		fmt.Println("Visiting Anime Episode URL:", req.URL.String())
-	})
+	/* Suppress scraper output. */
+	if !flags.Quiet {
+		c.OnRequest(func(req *colly.Request) {
+			fmt.Println("Visiting Anime Episode URL:", req.URL.String())
+		})
+	}
 
 	/* Start the collector on the title. */
 	c.Visit(title.Link)
+
+	/* Wait until all asynchronous requests are complete. */
+	if flags.Async {
+		c.Wait()
+	}
 
 	return episodes
 }
