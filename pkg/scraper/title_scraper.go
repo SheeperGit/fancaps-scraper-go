@@ -2,6 +2,7 @@ package scraper
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/gocolly/colly"
@@ -52,6 +53,18 @@ func GetTitles(searchURL string, flags cli.CLIFlags) []types.Title {
 	if flags.Async {
 		c.Wait()
 	}
+
+	/* Sort found titles by category, then alphabetically. (Case-insensitive) */
+	sort.Slice(titles, func(i, j int) bool {
+		catI := titles[i].Category
+		catJ := titles[j].Category
+
+		if catI != catJ {
+			return catI < catJ
+		}
+
+		return strings.ToLower(titles[i].Name) < strings.ToLower(titles[j].Name)
+	})
 
 	/* Debug: Print found titles. */
 	if flags.Debug {
