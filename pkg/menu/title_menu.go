@@ -221,7 +221,7 @@ func getTabRow(tabs []types.Category, activeTab types.Category, contentWidth int
 	var renderedTabs []string
 	for i, t := range tabs {
 		tabStyle := lipgloss.NewStyle().Width(tabWidth)
-		isFirst, isLast, isActive := i == 0, i == tabCount-1, i == int(activeTab)
+		isFirst, isLast, isActive := i == 0, i == tabCount-1, t == activeTab
 
 		if tabCount == 1 {
 			tabStyle = tabStyle.Inherit(singleTabStyle)
