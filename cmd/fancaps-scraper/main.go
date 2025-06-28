@@ -21,8 +21,8 @@ func main() {
 	titles := scraper.GetTitles(searchURL, catStats, flags)
 
 	/* Allow the user to choose which titles to scrape from. */
-	titles = menu.LaunchTitleMenu(titles, flags.Categories, catStats, flags.Debug)
+	selectedTitles := menu.LaunchTitleMenu(titles, flags.Categories, catStats, flags.Debug)
 
 	/* Get episodes from selected titles. */
-	scraper.GetEpisodes(titles, flags)
+	scraper.GetEpisodes(selectedTitles, flags)
 }
