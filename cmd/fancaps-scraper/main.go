@@ -1,11 +1,10 @@
 package main
 
 import (
-	"fmt"
-
 	"sheeper.com/fancaps-scraper-go/pkg/cli"
 	"sheeper.com/fancaps-scraper-go/pkg/menu"
 	"sheeper.com/fancaps-scraper-go/pkg/scraper"
+	"sheeper.com/fancaps-scraper-go/pkg/types"
 )
 
 func main() {
@@ -15,17 +14,15 @@ func main() {
 	/* Get the URL to scrape based on category selections. */
 	searchURL := flags.BuildQueryURL()
 
+	/* Category statistics. */
+	catStats := types.NewCatStats()
+
 	/* Get titles matching user query. */
-	titles := scraper.GetTitles(searchURL, flags)
+	titles := scraper.GetTitles(searchURL, catStats, flags)
 
-	/* Get episodes from titles. */
+	/* Allow the user to choose which titles to scrape from. */
+	titles = menu.LaunchTitleMenu(titles, flags.Categories, catStats, flags.Debug)
+
+	/* Get episodes from selected titles. */
 	scraper.GetEpisodes(titles, flags)
-
-	/* Allow the user to choose which titles and episodes to scrape from. */
-	selectedTitles := menu.LaunchTitleMenu(titles, flags.Categories, flags.Debug)
-
-	// to stop the compiler from complaining that the variable is unused
-	if len(selectedTitles) != 0 {
-		fmt.Println("yup, we sure got our selected titles :)")
-	}
 }

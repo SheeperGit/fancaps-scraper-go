@@ -2,6 +2,8 @@ package scraper
 
 import (
 	"fmt"
+	"os"
+	"slices"
 	"sort"
 	"strings"
 
@@ -11,7 +13,7 @@ import (
 )
 
 /* Given a URL `searchURL`, return all titles found by FanCaps. */
-func GetTitles(searchURL string, flags cli.CLIFlags) []types.Title {
+func GetTitles(searchURL string, catStats *types.CatStats, flags cli.CLIFlags) []types.Title {
 	var titles []types.Title
 
 	/* Base options for the scraper. */
@@ -30,19 +32,21 @@ func GetTitles(searchURL string, flags cli.CLIFlags) []types.Title {
 	/* Extract the title's name and link. */
 	c.OnHTML("h4 > a", func(e *colly.HTMLElement) {
 		link := e.Request.AbsoluteURL(e.Attr("href"))
+		category := getCategory(link)
 		title := types.Title{
-			Category: getCategory(link),
+			Category: category,
 			Name:     e.Text,
 			Link:     link,
 		}
 		titles = append(titles, title)
+		catStats.Increment(category)
 	})
 
 	/* Suppress scraper output. */
-	if flags.Quiet {
+	if flags.Debug {
 		/* Before making a request, print "Visiting: <URL>" */
 		c.OnRequest(func(req *colly.Request) {
-			fmt.Println("Visiting Search URL:", req.URL.String())
+			fmt.Printf("SEARCH QUERY URL: %s\n\n", req.URL.String())
 		})
 	}
 
@@ -66,8 +70,23 @@ func GetTitles(searchURL string, flags cli.CLIFlags) []types.Title {
 		return strings.ToLower(titles[i].Name) < strings.ToLower(titles[j].Name)
 	})
 
-	/* Debug: Print found titles. */
+	/* Debug: Print category statistics and found titles. */
 	if flags.Debug {
+
+		snapshot := catStats.Snapshot()
+
+		var categories []types.Category
+		for cat := range snapshot {
+			categories = append(categories, cat)
+		}
+		slices.Sort(categories)
+
+		fmt.Println("CATEGORY STATISTICS:")
+		for _, cat := range categories {
+			fmt.Printf("\t%s Found: %d\n", cat.String(), snapshot[cat])
+		}
+		fmt.Printf("\n\n")
+
 		fmt.Println("FOUND TITLES:")
 		for _, t := range titles {
 			fmt.Println(t.Name, t.Link)
@@ -88,6 +107,8 @@ func getCategory(url string) types.Category {
 	case strings.Contains(url, "/anime/"):
 		return types.CategoryAnime
 	default:
-		return types.CategoryUnknown
+		fmt.Fprintf(os.Stderr, "getCategory: couldn't extract category from url %s", url)
+		os.Exit(1)
+		return -1
 	}
 }

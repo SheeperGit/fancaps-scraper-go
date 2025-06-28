@@ -78,31 +78,48 @@ var titleKeys = titleKeyMap{
 	),
 }
 
-/* Title/Episode Menu Model. */
+/* Title Menu Model. */
 type titleModel struct {
-	Tabs       []types.Category
-	TabContent []types.Title
-	activeTab  types.Category
-	keys       titleKeyMap
-	help       help.Model
-	inputStyle lipgloss.Style
-	cursor     int
-	choices    []types.Title
-	selected   []types.Title
-	confirmed  bool
-	errMsg     string
+	/* Base Title Model fields. */
+
+	Tabs       []types.Category // Menu tabs.
+	TabContent []types.Title    // Active tab content.
+	activeTab  types.Category   // Currently viewed tab.
+	keys       titleKeyMap      // Menu Keybinds.
+	help       help.Model       // Help view.
+	inputStyle lipgloss.Style   // Input style.
+	cursor     int              // Position of current selection.
+	choices    []types.Title    // Available choices.
+	selected   []types.Title    // Selected choices.
+	confirmed  bool             // True if the user confirmed their selection, false otherwise.
+	errMsg     string           // Error message. If empty, no errors.
+
+	/* Cached View() fields. */
+
+	catStats     *types.CatStats // Amount of titles per category.
+	menuWidth    int             // Menu width.
+	menuHeight   int             // Menu height.
+	contentWidth int             // Content width.
 }
 
 /* Initializes the title model. */
-func initialTitleModel(titles []types.Title, tabs []types.Category) titleModel {
+func initialTitleModel(titles []types.Title, catStats *types.CatStats) titleModel {
+	menuHeight := catStats.Max() + windowStyle.GetVerticalFrameSize()
+	contentPadding := getContentPadding(menuLineFormat)
+	contentWidth := lipgloss.Width(windowStyle.Render(getLongestTitle(titles))) + contentPadding - windowStyle.GetHorizontalPadding()
+
 	return titleModel{
-		Tabs:       tabs,
+		Tabs:       catStats.UsedCategories(),
 		TabContent: []types.Title{},
 		keys:       titleKeys,
 		help:       help.New(),
 		inputStyle: inputStyle,
 		choices:    titles,
 		selected:   []types.Title{},
+
+		catStats:     catStats,
+		menuHeight:   menuHeight,
+		contentWidth: contentWidth,
 	}
 }
 
@@ -111,7 +128,7 @@ Returns an initial command for the application to run.
 In this case, sets a suitable window title for the title model.
 */
 func (m titleModel) Init() tea.Cmd {
-	return tea.SetWindowTitle("Fancaps-Scraper-Go Title/Episode Picker")
+	return tea.SetWindowTitle("Fancaps-Scraper-Go Title Picker")
 }
 
 /* Handles incoming events and updates the title model `m` accordingly. */
@@ -133,16 +150,16 @@ func (m titleModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.setTabWrapRight()
 		case key.Matches(msg, m.keys.Toggle):
 			choice := m.choices[m.cursor]
-			m.toggleTitle(choice)
+			m.toggle(choice)
 		case key.Matches(msg, m.keys.ToggleAll):
-			m.toggleAllTitles()
+			m.toggleAll()
 		case key.Matches(msg, m.keys.Confirm):
-			/* Must select at least one title/episode. */
+			/* Must select at least one title. */
 			if len(m.selected) != 0 {
 				m.confirmed = true
 				return m, m.resetWindowTitleAndQuit()
 			} else {
-				m.errMsg = "You must select at least one title/episode."
+				m.errMsg = "You must select at least one title."
 			}
 		case key.Matches(msg, m.keys.Help):
 			m.help.ShowAll = !m.help.ShowAll
@@ -171,31 +188,52 @@ var (
 /* Renders the UI based on the data in the title model, `m`. */
 func (m titleModel) View() string {
 	doc := strings.Builder{}
+
+	tabRow := m.getTabRow()
+	doc.WriteString(tabRow)
+
+	/* Calculate menu width only if it was not previously computed. */
+	if m.menuWidth == 0 {
+		m.menuWidth = lipgloss.Width(tabRow) - windowStyle.GetHorizontalFrameSize()
+	}
+
+	content := m.getTitleMenuContent()
+
+	belowMenuContent := ""
+	if m.errMsg != "" {
+		belowMenuContent += "\n" + errMsgStyle.Render(m.errMsg) + "\n"
+	}
+	belowMenuContent += "\n" + m.help.View(m.keys) + "\n"
+
+	doc.WriteString(windowStyle.Width(m.menuWidth).Height(m.menuHeight).Render(content))
+	doc.WriteString(belowMenuContent)
+
+	return docStyle.Render(doc.String())
+}
+
+func (m titleModel) getTabRow() string {
+	tabCount := len(m.Tabs)
+
+	tabWidth := m.contentWidth / tabCount
+	if tabCount == 1 {
+		tabWidth += 2 // Increase tab width by 2 to make the single-tab menu look less smushed.
+	}
+
 	var renderedTabs []string
-
-	longestContent := getLongestTitleString(m.choices)
-	content, spaces := m.getTitleMenuContent(longestContent)
-	menuHeight := strings.Count(content, "\n")
-
 	for i, t := range m.Tabs {
-		var style lipgloss.Style
-
-		contentWidth := lipgloss.Width(windowStyle.Render(longestContent)) - windowStyle.GetHorizontalPadding() + spaces
-		tabCount := len(m.Tabs)
-		tabWidth := contentWidth / tabCount
-
+		tabStyle := lipgloss.NewStyle().Width(tabWidth)
 		isFirst, isLast, isActive := i == 0, i == tabCount-1, i == int(m.activeTab)
 
 		if tabCount == 1 {
-			style = singleTabStyle
+			tabStyle = tabStyle.Inherit(singleTabStyle)
 		} else if isActive {
-			style = activeTabStyle
+			tabStyle = tabStyle.Inherit(activeTabStyle)
 		} else {
-			style = inactiveTabStyle
+			tabStyle = tabStyle.Inherit(inactiveTabStyle)
 		}
 
 		if tabCount > 1 {
-			border, _, _, _, _ := style.GetBorder()
+			border, _, _, _, _ := tabStyle.GetBorder()
 			if isFirst && isActive {
 				border.BottomLeft = "│"
 			} else if isFirst && !isActive {
@@ -205,75 +243,76 @@ func (m titleModel) View() string {
 			} else if isLast && !isActive {
 				border.BottomRight = "┤"
 			}
-			style = style.Border(border)
+			tabStyle = tabStyle.Border(border)
 		}
-
-		style = style.Width(tabWidth)
-
-		renderedTabs = append(renderedTabs, style.Render(t.String()))
+		renderedTabs = append(renderedTabs, tabStyle.Render(t.String()))
 	}
 
-	row := lipgloss.JoinHorizontal(lipgloss.Top, renderedTabs...)
-	doc.WriteString(row)
-	doc.WriteString("\n")
+	return lipgloss.JoinHorizontal(lipgloss.Top, renderedTabs...) + "\n"
+}
 
-	menuWidth := lipgloss.Width(row) - windowStyle.GetHorizontalFrameSize()
+/* Returns the content to render in the Title menu. */
+func (m titleModel) getTitleMenuContent() string {
+	var titleContent string
 
-	belowMenuContent := ""
-	if m.errMsg != "" {
-		belowMenuContent += "\n" + errMsgStyle.Render(m.errMsg) + "\n"
+	for i, choice := range m.choices {
+		/* Only render titles matching the category of the active tab. */
+		if m.activeTab == choice.Category {
+			cursor := ' '
+			if m.cursor == i {
+				cursor = '>'
+			}
+
+			checked := ' '
+			if containsTitle(m.selected, choice) {
+				checked = 'x'
+			}
+
+			line := fmt.Sprintf(menuLineFormat, cursor, checked, choice.Name)
+
+			style := lipgloss.NewStyle()
+			if checked == 'x' {
+				style = style.Inherit(selectedStyle)
+			}
+			if m.cursor == i {
+				style = style.Inherit(highlightStyle)
+			}
+
+			titleContent += style.Render(line) + "\n"
+		}
 	}
-	belowMenuContent += "\n" + m.help.View(m.keys) + "\n"
 
-	doc.WriteString(windowStyle.Width(menuWidth).Height(menuHeight).Render(content))
-	doc.WriteString(belowMenuContent)
-	return docStyle.Render(doc.String())
+	return titleContent
 }
 
 /*
-Returns the content to render in the Title menu,
-as well as the number of extra characters that do not pertain
-to the longest title/episode name (used in Tab width calculation).
+Returns the number of characters that don't pertain to a title name
+from a format string `s`.
 */
-func (m titleModel) getTitleMenuContent(longestName string) (string, int) {
-	var titleContent string
-	var extraChars int
-
-	for i, choice := range m.choices {
-		cursor := " "
-		if m.cursor == i {
-			cursor = ">"
-		}
-
-		checked := " "
-		if containsTitle(m.selected, choice) {
-			checked = "x"
-		}
-
-		line := fmt.Sprintf("%s [%s] %s", cursor, checked, choice.Name)
-		if longestName == choice.Name {
-			extraChars = len(line) - len(longestName)
-		}
-
-		style := lipgloss.NewStyle()
-		if checked == "x" {
-			style = style.Inherit(selectedStyle)
-		}
-		if m.cursor == i {
-			style = style.Inherit(highlightStyle)
-		}
-
-		titleContent += style.Render(line) + "\n"
+func getContentPadding(s string) int {
+	lastS := strings.LastIndex(s, "%s")
+	if lastS == -1 {
+		return 0
 	}
 
-	return titleContent, extraChars
+	count := 0
+	for i := 0; i < lastS; i++ {
+		/* Count `%c` as one char. */
+		if i+1 < lastS && s[i:i+2] == "%c" {
+			i++
+			continue
+		}
+		count++
+	}
+
+	return count
 }
 
 /*
 Returns the longest title or episode name from titles `titles`.
 (Useful for determining the maximum width with which to render the Title Menu.)
 */
-func getLongestTitleString(titles []types.Title) string {
+func getLongestTitle(titles []types.Title) string {
 	maxWidth := ""
 
 	for _, title := range titles {
@@ -293,7 +332,7 @@ func getLongestTitleString(titles []types.Title) string {
 /* Returns true, if `t` is in `titles`, and returns false otherwise. */
 func containsTitle(titles []types.Title, t types.Title) bool {
 	for _, title := range titles {
-		if title.Name == t.Name {
+		if title.Link == t.Link {
 			return true
 		}
 	}
@@ -302,28 +341,27 @@ func containsTitle(titles []types.Title, t types.Title) bool {
 }
 
 /*
-Launch the Title/Episode Menu.
-Returns selected titles/episodes, or exits if the user quits.
-If `debug` is enabled, then this function prints out the selected titles/episodes.
+Launches the Title Menu.
+Returns selected titles, or exits if the user quits.
+If `debug` is enabled, then this function prints out the selected titles.
 */
-func LaunchTitleMenu(titles []types.Title, tabs []types.Category, debug bool) []types.Title {
-	p := tea.NewProgram(initialTitleModel(titles, tabs))
+func LaunchTitleMenu(titles []types.Title, tabs []types.Category, catStats *types.CatStats, debug bool) []types.Title {
+	p := tea.NewProgram(initialTitleModel(titles, catStats))
 	if m, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Title Menu has encountered an error: %v", err)
 		os.Exit(1)
 	} else {
 		m, ok := m.(titleModel)
 		if ok {
-			/* Debug: Print selected titles and episodes. */
+			/* Debug: Print selected titles. */
 			if debug {
-				fmt.Println("\nSELECTED TITLES AND EPISODES:")
+				fmt.Println("\nSELECTED TITLES:")
 				for _, title := range m.selected {
 					fmt.Printf("%s [%s] -> %s\n", title.Name, title.Category, title.Link)
-					for _, episode := range title.Episodes {
-						fmt.Printf("\t%s -> %s\n", episode.Name, episode.Link)
-					}
 				}
 			}
+			fmt.Println()
+
 			/* User has not confirmed their selection. Exit. */
 			if !m.confirmed {
 				fmt.Fprintf(os.Stderr, "Title Menu: Operation aborted.\n")
@@ -338,10 +376,10 @@ func LaunchTitleMenu(titles []types.Title, tabs []types.Category, debug bool) []
 }
 
 /*
-Adds/removes the title `title` from the selection of title model `m`.
+Adds/removes the title `title` to/from the selection of title model `m`.
 Uses the URL of the title to check equality.
 */
-func (m *titleModel) toggleTitle(title types.Title) {
+func (m *titleModel) toggle(title types.Title) {
 	for i, t := range m.selected {
 		if t.Link == title.Link {
 			m.selected = append(m.selected[:i], m.selected[i+1:]...)
@@ -351,14 +389,41 @@ func (m *titleModel) toggleTitle(title types.Title) {
 	m.selected = append(m.selected, title)
 }
 
-/* Adds/removes all titles of title model `m`. */
-// TODO: Toggle all titles that match current activeTab (i.e., match the category tab)
-func (m *titleModel) toggleAllTitles() {
-	if len(m.selected) < len(m.choices) {
-		m.selected = make([]types.Title, len(m.choices))
-		copy(m.selected, m.choices)
+/* Adds/removes all titles to/from the selection of title model `m` on the active tab. */
+func (m *titleModel) toggleAll() {
+	/* Get all titles from the active tab. */
+	var activeTabCategories []types.Title
+	for _, t := range m.choices {
+		if t.Category == m.activeTab {
+			activeTabCategories = append(activeTabCategories, t)
+		}
+	}
+
+	/* Determine whether all titles in the active tab are selected. */
+	allSelected := true
+	for _, t := range activeTabCategories {
+		if !containsTitle(m.selected, t) {
+			allSelected = false
+			break
+		}
+	}
+
+	if allSelected {
+		/* New selection becomes all previously selected titles excluding all titles from the active tab. */
+		var newSelected []types.Title
+		for _, t := range m.selected {
+			if t.Category != m.activeTab {
+				newSelected = append(newSelected, t)
+			}
+		}
+		m.selected = newSelected
 	} else {
-		m.selected = nil
+		/* If a title from the active tab is not selected, add it to the selection. */
+		for _, t := range activeTabCategories {
+			if !containsTitle(m.selected, t) {
+				m.selected = append(m.selected, t)
+			}
+		}
 	}
 }
 
@@ -370,8 +435,11 @@ func (m *titleModel) setTabWrapLeft() {
 	if m.activeTab <= 0 {
 		m.activeTab = types.Category(len(m.Tabs) - 1)
 	} else {
-		m.activeTab--
+		m.activeTab = m.Tabs[m.activeTab-1]
 	}
+
+	/* Set cursor to the beginning of the switched tab. */
+	m.cursor = m.getTabStartIndex()
 }
 
 /*
@@ -382,8 +450,24 @@ func (m *titleModel) setTabWrapRight() {
 	if m.activeTab >= types.Category(len(m.Tabs)-1) {
 		m.activeTab = 0
 	} else {
-		m.activeTab++
+		m.activeTab = m.Tabs[m.activeTab+1]
 	}
+
+	/* Set cursor to the beginning of the switched tab. */
+	m.cursor = m.getTabStartIndex()
+}
+
+/* Returns the starting cursor index of the active tab. */
+func (m *titleModel) getTabStartIndex() int {
+	tabStartIndex := 0
+	for _, cat := range m.Tabs {
+		if cat == m.activeTab {
+			break
+		}
+		tabStartIndex += m.catStats.Get(cat)
+	}
+
+	return tabStartIndex
 }
 
 /*
@@ -391,8 +475,8 @@ Set the cursor of model `m` to either move up,
 or wrap-around to the end of the list of choices.
 */
 func (m *titleModel) setCursorWrapUp() {
-	if m.cursor <= 0 {
-		m.cursor = len(m.choices) - 1
+	if m.cursor <= 0 || m.choices[m.cursor-1].Category != m.choices[m.cursor].Category {
+		m.cursor = m.cursor + m.catStats.Get(m.choices[m.cursor].Category) - 1
 	} else {
 		m.cursor--
 	}
@@ -403,8 +487,8 @@ Set the cursor of model `m` to either move down,
 or wrap-around to the beginning of the list of choices.
 */
 func (m *titleModel) setCursorWrapDown() {
-	if m.cursor >= len(m.choices)-1 {
-		m.cursor = 0
+	if m.cursor >= len(m.choices)-1 || m.choices[m.cursor+1].Category != m.choices[m.cursor].Category {
+		m.cursor = m.cursor - m.catStats.Get(m.choices[m.cursor].Category) + 1
 	} else {
 		m.cursor++
 	}

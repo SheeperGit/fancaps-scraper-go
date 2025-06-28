@@ -18,8 +18,7 @@ type CLIFlags struct {
 	Query      string           // Search query to scrape from.
 	Categories []types.Category // Selected categories to search using `Query`.
 	Async      bool             // If true, enable asynchronous network requests.
-	Debug      bool             // If true, print final selections and scraped results after completion.
-	Quiet      bool             // If true, suppress scraper output.
+	Debug      bool             // If true, print useful debugging messages.
 }
 
 /*
@@ -40,7 +39,6 @@ func ParseCLI() CLIFlags {
 
 	/* Miscellaneous Flags. */
 	debug := flag.Bool("debug", false, "Enable debug mode (print final selections and scraped results after completion)")
-	quiet := flag.Bool("quiet", false, "Suppress scraper output")
 
 	flag.Parse()
 
@@ -82,7 +80,6 @@ func ParseCLI() CLIFlags {
 		Categories: categories,
 		Async:      *async,
 		Debug:      *debug,
-		Quiet:      *quiet,
 	}
 }
 
