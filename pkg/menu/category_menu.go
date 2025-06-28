@@ -162,20 +162,20 @@ func (m categoryModel) View() string {
 	s := "Select Categories to Scrape from:\n\n"
 
 	for i, choice := range m.choices {
-		cursor := " "
+		cursor := ' '
 		if m.cursor == i {
-			cursor = ">"
+			cursor = '>'
 		}
 
-		checked := " "
+		checked := ' '
 		if _, ok := m.selected[choice]; ok {
-			checked = "x"
+			checked = 'x'
 		}
 
-		line := fmt.Sprintf("%s [%s] %s", cursor, checked, choice)
+		line := fmt.Sprintf(menuLineFormat, cursor, checked, choice)
 
 		style := lipgloss.NewStyle()
-		if checked == "x" {
+		if checked == 'x' {
 			style = style.Inherit(selectedStyle)
 		}
 		if m.cursor == i {
@@ -195,7 +195,7 @@ func (m categoryModel) View() string {
 }
 
 /*
-Launch the Category Menu.
+Launches the Category Menu.
 Returns selected categories, or exits if the user quits.
 */
 func LaunchCategoriesMenu() map[types.Category]struct{} {

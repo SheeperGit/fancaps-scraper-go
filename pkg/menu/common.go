@@ -17,6 +17,9 @@ import (
 // 	Quit      key.Binding
 // }
 
+/* Format of a menu line. */
+const menuLineFormat = "%c [%c] %s"
+
 /* Menu Styles. */
 var (
 	inputStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF75B7"))
