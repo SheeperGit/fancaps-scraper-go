@@ -114,29 +114,9 @@ func (m categoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keys.Down):
 			m.setCursorWrapDown()
 		case key.Matches(msg, m.keys.Toggle):
-			choice := m.choices[m.cursor]
-			_, ok := m.selected[choice]
-			if ok {
-				delete(m.selected, choice)
-			} else {
-				m.selected[choice] = struct{}{}
-			}
+			m.toggle()
 		case key.Matches(msg, m.keys.ToggleAll):
-			if len(m.selected) < len(m.choices) {
-				for _, choice := range m.choices {
-					_, ok := m.selected[choice]
-					if !ok {
-						m.selected[choice] = struct{}{}
-					}
-				}
-			} else {
-				for _, choice := range m.choices {
-					_, ok := m.selected[choice]
-					if ok {
-						delete(m.selected, choice)
-					}
-				}
-			}
+			m.toggleAll()
 		case key.Matches(msg, m.keys.Confirm):
 			/* Must select at least one category. */
 			if len(m.selected) != 0 {
@@ -239,6 +219,34 @@ func (m *categoryModel) setCursorWrapDown() {
 		m.cursor = 0
 	} else {
 		m.cursor++
+	}
+}
+
+func (m *categoryModel) toggle() {
+	choice := m.choices[m.cursor]
+	_, ok := m.selected[choice]
+	if ok {
+		delete(m.selected, choice)
+	} else {
+		m.selected[choice] = struct{}{}
+	}
+}
+
+func (m *categoryModel) toggleAll() {
+	if len(m.selected) < len(m.choices) {
+		for _, choice := range m.choices {
+			_, ok := m.selected[choice]
+			if !ok {
+				m.selected[choice] = struct{}{}
+			}
+		}
+	} else {
+		for _, choice := range m.choices {
+			_, ok := m.selected[choice]
+			if ok {
+				delete(m.selected, choice)
+			}
+		}
 	}
 }
 
