@@ -104,12 +104,15 @@ type titleModel struct {
 
 /* Initializes the title model. */
 func initialTitleModel(titles []types.Title, catStats *types.CatStats) titleModel {
-	menuHeight := catStats.Max() + windowStyle.GetVerticalFrameSize()
 	contentPadding := getContentPadding(menuLineFormat)
 	contentWidth := lipgloss.Width(windowStyle.Render(getLongestTitle(titles))) + contentPadding - windowStyle.GetHorizontalPadding()
 
+	tabs := catStats.UsedCategories()
+	menuWidth := lipgloss.Width(getTabRow(tabs, types.Category(0), contentWidth)) - windowStyle.GetHorizontalFrameSize()
+	menuHeight := catStats.Max() + windowStyle.GetVerticalFrameSize()
+
 	return titleModel{
-		Tabs:       catStats.UsedCategories(),
+		Tabs:       tabs,
 		TabContent: []types.Title{},
 		keys:       titleKeys,
 		help:       help.New(),
@@ -118,6 +121,7 @@ func initialTitleModel(titles []types.Title, catStats *types.CatStats) titleMode
 		selected:   []types.Title{},
 
 		catStats:     catStats,
+		menuWidth:    menuWidth,
 		menuHeight:   menuHeight,
 		contentWidth: contentWidth,
 	}
@@ -189,13 +193,8 @@ var (
 func (m titleModel) View() string {
 	doc := strings.Builder{}
 
-	tabRow := m.getTabRow()
+	tabRow := getTabRow(m.Tabs, m.activeTab, m.contentWidth)
 	doc.WriteString(tabRow)
-
-	/* Calculate menu width only if it was not previously computed. */
-	if m.menuWidth == 0 {
-		m.menuWidth = lipgloss.Width(tabRow) - windowStyle.GetHorizontalFrameSize()
-	}
 
 	content := m.getTitleMenuContent()
 
@@ -211,18 +210,18 @@ func (m titleModel) View() string {
 	return docStyle.Render(doc.String())
 }
 
-func (m titleModel) getTabRow() string {
-	tabCount := len(m.Tabs)
+func getTabRow(tabs []types.Category, activeTab types.Category, contentWidth int) string {
+	tabCount := len(tabs)
 
-	tabWidth := m.contentWidth / tabCount
+	tabWidth := contentWidth / tabCount
 	if tabCount == 1 {
 		tabWidth += 2 // Increase tab width by 2 to make the single-tab menu look less smushed.
 	}
 
 	var renderedTabs []string
-	for i, t := range m.Tabs {
+	for i, t := range tabs {
 		tabStyle := lipgloss.NewStyle().Width(tabWidth)
-		isFirst, isLast, isActive := i == 0, i == tabCount-1, i == int(m.activeTab)
+		isFirst, isLast, isActive := i == 0, i == tabCount-1, i == int(activeTab)
 
 		if tabCount == 1 {
 			tabStyle = tabStyle.Inherit(singleTabStyle)
