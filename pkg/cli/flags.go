@@ -1,15 +1,14 @@
 package cli
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
-	"log"
 	"net/url"
 	"os"
 	"slices"
 
 	"sheeper.com/fancaps-scraper-go/pkg/menu"
+	"sheeper.com/fancaps-scraper-go/pkg/prompt"
 	"sheeper.com/fancaps-scraper-go/pkg/types"
 )
 
@@ -44,7 +43,7 @@ func ParseCLI() CLIFlags {
 
 	/* If `-q` not specified, prompt user for search query. */
 	for *query == "" {
-		*query = getSearchQuery()
+		*query = prompt.PromptUser("Enter Search Query: ", prompt.SearchHelpPrompt)
 		if *query == "" {
 			fmt.Fprintf(os.Stderr, "CLI Error: Search query cannot be empty.\n")
 			flag.Usage()
@@ -102,18 +101,4 @@ func (flags CLIFlags) BuildQueryURL() string {
 
 	const baseURL = "https://fancaps.net/search.php"
 	return baseURL + "?" + params.Encode()
-}
-
-/* Prompt user for a search query to scrape titles from. */
-func getSearchQuery() string {
-	fmt.Print("Enter Search Query: ")
-	scanner := bufio.NewScanner(os.Stdin)
-	if scanner.Scan() {
-		return scanner.Text()
-	}
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
-	}
-
-	return ""
 }
