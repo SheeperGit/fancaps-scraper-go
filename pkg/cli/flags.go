@@ -7,9 +7,9 @@ import (
 	"os"
 	"slices"
 
-	"sheeper.com/fancaps-scraper-go/pkg/menu"
-	"sheeper.com/fancaps-scraper-go/pkg/prompt"
 	"sheeper.com/fancaps-scraper-go/pkg/types"
+	"sheeper.com/fancaps-scraper-go/pkg/ui/menu"
+	"sheeper.com/fancaps-scraper-go/pkg/ui/prompt"
 )
 
 /* Available CLI Flags. */

@@ -2,9 +2,9 @@ package main
 
 import (
 	"sheeper.com/fancaps-scraper-go/pkg/cli"
-	"sheeper.com/fancaps-scraper-go/pkg/menu"
 	"sheeper.com/fancaps-scraper-go/pkg/scraper"
 	"sheeper.com/fancaps-scraper-go/pkg/types"
+	"sheeper.com/fancaps-scraper-go/pkg/ui/menu"
 )
 
 func main() {
