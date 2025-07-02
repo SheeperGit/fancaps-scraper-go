@@ -35,7 +35,7 @@ func TestParseSequenceString(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			got, err := parseSequenceString(tt.input, max)
+			got, err := ParseSequenceString(tt.input, max, false)
 
 			if tt.expectErr {
 				if err == nil {

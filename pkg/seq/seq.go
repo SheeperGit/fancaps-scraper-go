@@ -50,7 +50,7 @@ Example usage:
 
 	parseSequenceString("1-3, 2-4, 5-8:2, 6-8:2", 100)	// [1, 2, 3, 4, 5, 6, 7, 8]
 */
-func parseSequenceString(seqStr string, max int) ([]int, error) {
+func ParseSequenceString(seqStr string, max int, debug bool) ([]int, error) {
 	rangeRe := regexp.MustCompile(`^\s*(\d*)-(\d*)(?::(\d+))?\s*$`)
 	intRe := regexp.MustCompile(`^\s*(\d+)\s*$`)
 
@@ -115,6 +115,18 @@ func parseSequenceString(seqStr string, max int) ([]int, error) {
 		nums = append(nums, n)
 	}
 	sort.Ints(nums)
+
+	/* Debug: Print sequence output. */
+	if debug {
+		fmt.Printf("You selected episodes: ")
+		for i, n := range nums {
+			if i > 0 {
+				fmt.Print(", ")
+			}
+			fmt.Print(n)
+		}
+		fmt.Println()
+	}
 
 	return nums, nil
 }
