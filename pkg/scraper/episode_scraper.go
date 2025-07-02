@@ -12,7 +12,7 @@ import (
 )
 
 /* Get episodes from titles `titles`. */
-func GetEpisodes(titles []types.Title, flags cli.CLIFlags) {
+func GetEpisodes(titles []types.Title, flags cli.CLIFlags) []types.Title {
 	var wg sync.WaitGroup
 
 	if flags.Debug {
@@ -66,6 +66,8 @@ func GetEpisodes(titles []types.Title, flags cli.CLIFlags) {
 			}
 		}
 	}
+
+	return titles
 }
 
 /* Given a TV series title `title`, return its list of episodes. */
@@ -146,7 +148,7 @@ func GetAnimeEpisodes(title types.Title, flags cli.CLIFlags) []types.Episode {
 		href, _ := e.DOM.Parent().Attr("href")
 		link := e.Request.AbsoluteURL(href)
 		episode := types.Episode{
-			Name: getEpisodeTitle(e.Text),
+			Name: getEpisodeTitle(e.Text) + " of " + title.Name, // Append title name (required for `getEpisodeByNumber()`)
 			Link: link,
 		}
 		episodes = append(episodes, episode)
