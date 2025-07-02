@@ -7,17 +7,17 @@ import (
 
 /* A Movie, TV Series, or Anime title. */
 type Title struct {
-	Episodes []Episode
-	Category Category
-	Name     string
-	Link     string
+	Episodes []Episode // Episodes of the title.
+	Category Category  // Category of the title.
+	Name     string    // Name of the title.
+	Link     string    // Link to the title on fancaps.net.
 }
 
 /* An episode of a title. */
 type Episode struct {
-	Images []string
-	Name   string
-	Link   string
+	Images []string // URLs pointing to the images of the screencaps.
+	Name   string   // Name of the episode.
+	Link   string   // Link to the episode on fancaps.net.
 }
 
 /* Enum for Categories. */
