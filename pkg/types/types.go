@@ -101,9 +101,9 @@ func (c *CatStats) UsedCategories() []Category {
 	defer c.mu.Unlock()
 
 	var usedCats []Category
-	for i := Category(0); i < Category(len(CategoryName)); i++ {
-		if c.amts[i] != 0 {
-			usedCats = append(usedCats, i)
+	for cat := Category(0); cat < Category(len(CategoryName)); cat++ {
+		if c.amts[cat] != 0 {
+			usedCats = append(usedCats, cat)
 		}
 	}
 

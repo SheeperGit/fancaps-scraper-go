@@ -108,12 +108,14 @@ func initialTitleModel(titles []types.Title, catStats *types.CatStats) titleMode
 	contentWidth := lipgloss.Width(windowStyle.Render(getLongestTitle(titles))) + contentPadding - windowStyle.GetHorizontalPadding()
 
 	tabs := catStats.UsedCategories()
-	menuWidth := lipgloss.Width(getTabRow(tabs, types.Category(0), contentWidth)) - windowStyle.GetHorizontalFrameSize()
+	activeTab := tabs[0]
+	menuWidth := lipgloss.Width(getTabRow(tabs, activeTab, contentWidth)) - windowStyle.GetHorizontalFrameSize()
 	menuHeight := catStats.Max() + windowStyle.GetVerticalFrameSize()
 
 	return titleModel{
 		Tabs:       tabs,
 		TabContent: []types.Title{},
+		activeTab:  activeTab,
 		keys:       titleKeys,
 		help:       help.New(),
 		inputStyle: inputStyle,
@@ -431,10 +433,16 @@ Set the tab of model `m` to either move left,
 or wrap-around to the end of the list of tabs.
 */
 func (m *titleModel) setTabWrapLeft() {
-	if m.activeTab <= 0 {
-		m.activeTab = types.Category(len(m.Tabs) - 1)
-	} else {
-		m.activeTab = m.Tabs[m.activeTab-1]
+	i := m.getCategoryTabIndex(m.activeTab)
+
+	switch i {
+	case 0: // Go to last tab, if at the first tab.
+		m.activeTab = m.Tabs[len(m.Tabs)-1]
+	case -1: // Fallback on first tab, if category to switch to was not found.
+		fmt.Fprintf(os.Stderr, "title menu error: failed to find %s in tabs.\ndefaulting to first tab...\n\n", m.activeTab.String())
+		m.activeTab = m.Tabs[0]
+	default: // Go to previous tab, otherwise.
+		m.activeTab = m.Tabs[i-1]
 	}
 
 	/* Set cursor to the beginning of the switched tab. */
@@ -446,14 +454,34 @@ Set the tab of model `m` to either move right,
 or wrap-around to the beginning of the list of tabs.
 */
 func (m *titleModel) setTabWrapRight() {
-	if m.activeTab >= types.Category(len(m.Tabs)-1) {
-		m.activeTab = 0
-	} else {
-		m.activeTab = m.Tabs[m.activeTab+1]
+	i := m.getCategoryTabIndex(m.activeTab)
+
+	switch i {
+	case len(m.Tabs) - 1: // Go to first tab, if at the last tab.
+		m.activeTab = m.Tabs[0]
+	case -1: // Fallback on last tab, if category to switch to was not found.
+		fmt.Fprintf(os.Stderr, "title menu error: failed to find %s in tabs.\ndefaulting to last tab...\n\n", m.activeTab.String())
+		m.activeTab = m.Tabs[len(m.Tabs)-1]
+	default: // Go to next tab, otherwise.
+		m.activeTab = m.Tabs[i+1]
 	}
 
 	/* Set cursor to the beginning of the switched tab. */
 	m.cursor = m.getTabStartIndex()
+}
+
+/*
+Returns the index of the category `cat` relative to the tab list.
+Returns -1, if `cat` is not found in the tab list.
+*/
+func (m *titleModel) getCategoryTabIndex(cat types.Category) int {
+	for i, tab := range m.Tabs {
+		if tab == cat {
+			return i
+		}
+	}
+
+	return -1
 }
 
 /* Returns the starting cursor index of the active tab. */
