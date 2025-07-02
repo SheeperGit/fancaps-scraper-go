@@ -5,6 +5,7 @@ import (
 	"sheeper.com/fancaps-scraper-go/pkg/scraper"
 	"sheeper.com/fancaps-scraper-go/pkg/types"
 	"sheeper.com/fancaps-scraper-go/pkg/ui/menu"
+	"sheeper.com/fancaps-scraper-go/pkg/ui/prompt"
 )
 
 func main() {
@@ -25,4 +26,7 @@ func main() {
 
 	/* Get episodes from selected titles. */
 	scraper.GetEpisodes(selectedTitles, flags)
+
+	/* Select episodes to scrape from each title. */
+	prompt.SelectEpisodes(selectedTitles, flags.Debug)
 }
