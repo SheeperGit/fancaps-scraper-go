@@ -72,7 +72,6 @@ func GetTitles(searchURL string, catStats *types.CatStats, flags cli.CLIFlags) [
 
 	/* Debug: Print category statistics and found titles. */
 	if flags.Debug {
-
 		snapshot := catStats.Snapshot()
 
 		var categories []types.Category
@@ -87,7 +86,7 @@ func GetTitles(searchURL string, catStats *types.CatStats, flags cli.CLIFlags) [
 		}
 		fmt.Println()
 
-		fmt.Println("FOUND TITLES:")
+		fmt.Println("\nFOUND TITLES:")
 		for _, t := range titles {
 			fmt.Println(t.Name, t.Link)
 		}

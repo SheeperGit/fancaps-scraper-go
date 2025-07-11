@@ -52,13 +52,10 @@ func GetEpisodes(titles []types.Title, flags cli.CLIFlags) []types.Title {
 	if flags.Async {
 		wg.Wait()
 	}
-	if flags.Debug {
-		fmt.Println() // Make room for the other debug messages.
-	}
 
 	/* Debug: Print found titles and episodes. */
 	if flags.Debug {
-		fmt.Println("\nFOUND TITLES AND EPISODES:")
+		fmt.Println("\n\nFOUND TITLES AND EPISODES:")
 		for _, title := range titles {
 			fmt.Printf("%s [%s] -> %s\n", title.Name, title.Category, title.Link)
 			for _, episode := range title.Episodes {
