@@ -16,7 +16,7 @@ func GetEpisodes(titles []types.Title, flags cli.CLIFlags) []types.Title {
 	var wg sync.WaitGroup
 
 	if flags.Debug {
-		fmt.Println("\nLINKS VISITED:")
+		fmt.Println("\nEPISODE LINKS VISITED:")
 	}
 
 	/* Get the episodes for each title. */
