@@ -15,9 +15,8 @@ type Title struct {
 
 /* An episode of a title. */
 type Episode struct {
-	Images []string // URLs pointing to the images of the screencaps.
-	Name   string   // Name of the episode.
-	Link   string   // Link to the episode on fancaps.net.
+	Name string // Name of the episode.
+	Link string // Link to the episode on fancaps.net.
 }
 
 /* Enum for Categories. */
