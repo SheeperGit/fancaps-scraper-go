@@ -1,12 +1,13 @@
 package cli
 
 import (
-	"flag"
 	"fmt"
 	"net/url"
 	"os"
 	"slices"
+	"strings"
 
+	"github.com/spf13/cobra"
 	"sheeper.com/fancaps-scraper-go/pkg/types"
 	"sheeper.com/fancaps-scraper-go/pkg/ui/menu"
 	"sheeper.com/fancaps-scraper-go/pkg/ui/prompt"
@@ -20,69 +21,125 @@ type CLIFlags struct {
 	Debug      bool             // If true, print useful debugging messages.
 }
 
+/* Example usage of fancaps-scraper. */
+const exampleUsage = `
+  # Show this message and exit.
+  fancaps-scraper --help
+
+  # Search for "Naruto" with anime and tv series titles only.
+  fancaps-scraper --query Naruto --categories anime,tv
+
+  # Search for "The Office" (with short flags) in all categories. (Notice also the single quotes to signify "The Office" as one argument.)
+  fancaps-scraper -q 'The Office' -c all
+
+  # Search for "Inception" movie titles only, with debug enabled.
+  fancaps-scraper -q Inception --categories movies --debug
+
+  # Search for "Friends" tv series titles only, with asynchronous network requests explicitly disabled.
+  fancaps-scraper -q Friends --categories tv --async=false`
+
 /*
 Parse CLI flags.
 Always returns non-empty Query.
 */
 func ParseCLI() CLIFlags {
-	/* Query Flags. */
-	query := flag.String("q", "", "Search query term")
+	var (
+		flags      CLIFlags
+		query      string
+		categories string
+		async      bool
+		debug      bool
+	)
 
-	/* Category Flags. */
-	movies := flag.Bool("movies", false, "Include Movies in search query")
-	tv := flag.Bool("tv", false, "Include TV series in search query")
-	anime := flag.Bool("anime", false, "Include Anime in search query")
+	rootCmd := &cobra.Command{
+		Use:     "fancaps-scraper",
+		Short:   "Scrape images from fancaps.net using a CLI interface",
+		Example: exampleUsage,
+		Run: func(cmd *cobra.Command, args []string) {
+			/* If `-q` not specified, prompt user for search query. */
+			for query == "" {
+				query = prompt.PromptUser("Enter Search Query: ", prompt.SearchHelpPrompt)
+				if query == "" {
+					fmt.Fprintln(os.Stderr, "CLI Error: Search query cannot be empty.")
+					cmd.Usage()
+					os.Exit(1)
+				}
+			}
 
-	/* Optimization Flags. */
-	async := flag.Bool("async", true, "Enable asynchronous requests (recommended: significantly improves speed on most systems)")
+			flags.Query = query
+			flags.Async = async
+			flags.Debug = debug
 
-	/* Miscellaneous Flags. */
-	debug := flag.Bool("debug", false, "Enable debug mode (print final selections and scraped results after completion)")
+			/* Category Parsing. */
+			if categories != "" {
+				sanitizedInput := strings.ToLower(categories)
+				parts := strings.Split(sanitizedInput, ",")
 
-	flag.Parse()
+				categoryMap := map[string]types.Category{
+					"anime":  types.CategoryAnime,
+					"tv":     types.CategoryTV,
+					"movies": types.CategoryMovie,
+				}
 
-	/* If `-q` not specified, prompt user for search query. */
-	for *query == "" {
-		*query = prompt.PromptUser("Enter Search Query: ", prompt.SearchHelpPrompt)
-		if *query == "" {
-			fmt.Fprintf(os.Stderr, "CLI Error: Search query cannot be empty.\n")
-			flag.Usage()
-		}
+				seen := map[types.Category]bool{}
+
+				for _, part := range parts {
+					part = strings.TrimSpace(part)
+					if part == "all" {
+						for _, cat := range categoryMap {
+							if !seen[cat] {
+								flags.Categories = append(flags.Categories, cat)
+								seen[cat] = true
+							}
+						}
+						break
+					}
+
+					if cat, ok := categoryMap[part]; ok && !seen[cat] {
+						flags.Categories = append(flags.Categories, cat)
+						seen[cat] = true
+					} else if !ok {
+						fmt.Fprintf(os.Stderr, "CLI Error: Unknown category '%s'. Valid options are: anime, tv, movies, all\n", part)
+						os.Exit(1)
+					}
+				}
+			}
+
+			/* If no categories flags specified, open Category Menu. */
+			if len(flags.Categories) == 0 {
+				selectedMenuCategories := menu.LaunchCategoriesMenu()
+				for cat := range selectedMenuCategories {
+					flags.Categories = append(flags.Categories, cat)
+				}
+			}
+
+			/* Sort according to Category enum order. */
+			slices.Sort(flags.Categories)
+		},
 	}
 
-	var categories []types.Category
-	if *anime {
-		categories = append(categories, types.CategoryAnime)
-	}
-	if *tv {
-		categories = append(categories, types.CategoryTV)
-	}
-	if *movies {
-		categories = append(categories, types.CategoryMovie)
+	/* Flag Definitions. */
+	rootCmd.Flags().StringVarP(&query, "query", "q", "", "Search query term")
+	rootCmd.Flags().StringVarP(&categories, "categories", "c", "", "Categories to search. Format: [anime,tv,movies|all] (comma-separated)")
+	rootCmd.Flags().BoolVar(&async, "async", true, "Enable asynchronous requests")
+	rootCmd.Flags().BoolVar(&debug, "debug", false, "Enable debug mode")
+
+	/* "Override" default help. */
+	rootCmd.Flags().BoolP("help", "h", false, "Display this help and exit")
+	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		cmd.Root().Usage()
+		os.Exit(0)
+	})
+
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
-	/* If no categories flags specified, open Category Menu. */
-	if len(categories) == 0 {
-		selectedMenuCategories := menu.LaunchCategoriesMenu()
-
-		/* Set active categories according to Category Menu. */
-		for cat := range selectedMenuCategories {
-			categories = append(categories, cat)
-		}
-
-		/* Sort according to Category enum order. */
-		slices.Sort(categories)
-	}
-
-	return CLIFlags{
-		Query:      *query,
-		Categories: categories,
-		Async:      *async,
-		Debug:      *debug,
-	}
+	return flags
 }
 
-/* Returns initial URL to scrape based on search query, `CLIFlags.Query`. */
+/* Returns initial URL to scrape based on search query, `flags.Query`. */
 func (flags CLIFlags) BuildQueryURL() string {
 	params := url.Values{}
 	params.Add("q", flags.Query)
