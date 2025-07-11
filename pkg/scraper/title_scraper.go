@@ -85,7 +85,7 @@ func GetTitles(searchURL string, catStats *types.CatStats, flags cli.CLIFlags) [
 		for _, cat := range categories {
 			fmt.Printf("\t%s Found: %d\n", cat.String(), snapshot[cat])
 		}
-		fmt.Printf("\n\n")
+		fmt.Println()
 
 		fmt.Println("FOUND TITLES:")
 		for _, t := range titles {

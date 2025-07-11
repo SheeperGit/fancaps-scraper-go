@@ -41,7 +41,7 @@ var CategoryName = map[Category]string{
 
 /* Thread-safe category amounts. */
 type CatStats struct {
-	mu   sync.Mutex       // Prevents bad writes from concurrent increments.
+	mu   sync.RWMutex     // Prevents bad writes from concurrent increments, while allowing multiple readers.
 	amts map[Category]int // Amount of titles per category.
 }
 
@@ -62,16 +62,16 @@ func (m *CatStats) Increment(cat Category) {
 
 /* Returns the amount of titles found for category `cat`. */
 func (m *CatStats) Get(cat Category) int {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
 	return m.amts[cat]
 }
 
 /* Returns a copy of the category amounts. */
 func (m *CatStats) Snapshot() map[Category]int {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
 	copy := make(map[Category]int, len(m.amts))
 	maps.Copy(copy, m.amts)
@@ -81,8 +81,8 @@ func (m *CatStats) Snapshot() map[Category]int {
 
 /* Returns the highest amount of titles from all categories. */
 func (cs *CatStats) Max() int {
-	cs.mu.Lock()
-	defer cs.mu.Unlock()
+	cs.mu.RLock()
+	defer cs.mu.RUnlock()
 
 	max := 0
 	for _, v := range cs.amts {
@@ -96,8 +96,8 @@ func (cs *CatStats) Max() int {
 
 /* Returns a list of categories with at least one found title. */
 func (c *CatStats) UsedCategories() []Category {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 
 	var usedCats []Category
 	for cat := Category(0); cat < Category(len(CategoryName)); cat++ {
