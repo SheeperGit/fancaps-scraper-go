@@ -13,7 +13,7 @@ func main() {
 	flags := cli.ParseCLI()
 
 	/* Get the URL to scrape based on category selections. */
-	searchURL := flags.BuildQueryURL()
+	searchURL := cli.BuildQueryURL(flags.Query, flags.Categories)
 
 	/* Category statistics. */
 	catStats := types.NewCatStats()

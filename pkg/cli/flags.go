@@ -139,12 +139,15 @@ func ParseCLI() CLIFlags {
 	return flags
 }
 
-/* Returns initial URL to scrape based on search query, `flags.Query`. */
-func (flags CLIFlags) BuildQueryURL() string {
+/*
+Returns a URL which will be used to scrape titles using query `query`,
+searching only categories in `categories`.
+*/
+func BuildQueryURL(query string, categories []types.Category) string {
 	params := url.Values{}
-	params.Add("q", flags.Query)
+	params.Add("q", query)
 
-	for _, cat := range flags.Categories {
+	for _, cat := range categories {
 		switch cat {
 		case types.CategoryMovie:
 			params.Add("MoviesCB", "Movies")
