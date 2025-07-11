@@ -343,7 +343,7 @@ func containsTitle(titles []types.Title, t types.Title) bool {
 
 /*
 Launches the Title Menu.
-Returns selected titles, or exits if the user quits.
+Returns non-empty selected titles, or exits if the user quits.
 If `debug` is enabled, then this function prints out the selected titles.
 */
 func LaunchTitleMenu(titles []types.Title, tabs []types.Category, catStats *types.CatStats, debug bool) []types.Title {

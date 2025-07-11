@@ -176,7 +176,7 @@ func (m categoryModel) View() string {
 
 /*
 Launches the Category Menu.
-Returns selected categories, or exits if the user quits.
+Returns non-empty selected categories, or exits if the user quits.
 */
 func LaunchCategoriesMenu() map[types.Category]struct{} {
 	p := tea.NewProgram(initialCategoryModel())
