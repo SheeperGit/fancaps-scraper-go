@@ -1,2 +1,5 @@
 # Output executable
 fancaps-scraper-go
+
+# Default output directory
+output/

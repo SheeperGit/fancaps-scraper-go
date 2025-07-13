@@ -29,4 +29,7 @@ func main() {
 
 	/* Select episodes to scrape from each title. */
 	prompt.SelectEpisodes(selectedTitles, flags.Debug)
+
+	/* Download images from the selected titles and their selected episodes. */
+	scraper.GetImages(selectedTitles, flags)
 }
