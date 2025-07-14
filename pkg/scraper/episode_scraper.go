@@ -21,16 +21,17 @@ func GetEpisodes(titles []types.Title, flags cli.CLIFlags) []types.Title {
 
 	/* Get the episodes for each title. */
 	for i := range titles {
+		title := &titles[i]
 		/*
 			From title category, run corresponding episode scraper.
 			Note: Movies do not have episodes and thus do not require episode scraping.
 		*/
-		scrapeEpisodes := func(i int) {
-			switch titles[i].Category {
+		scrapeEpisodes := func(t *types.Title) {
+			switch t.Category {
 			case types.CategoryAnime:
-				titles[i].Episodes = GetAnimeEpisodes(titles[i], flags)
+				t.Episodes = GetAnimeEpisodes(t, flags)
 			case types.CategoryTV:
-				titles[i].Episodes = GetTVEpisodes(titles[i], flags)
+				t.Episodes = GetTVEpisodes(t, flags)
 			case types.CategoryMovie:
 				// Do nothing
 			default:
@@ -42,10 +43,10 @@ func GetEpisodes(titles []types.Title, flags cli.CLIFlags) []types.Title {
 			wg.Add(1)
 			go func(i int) {
 				defer wg.Done()
-				scrapeEpisodes(i)
+				scrapeEpisodes(title)
 			}(i)
 		} else {
-			scrapeEpisodes(i)
+			scrapeEpisodes(title)
 		}
 	}
 
@@ -56,7 +57,8 @@ func GetEpisodes(titles []types.Title, flags cli.CLIFlags) []types.Title {
 	/* Debug: Print found titles and episodes. */
 	if flags.Debug {
 		fmt.Println("\n\nFOUND TITLES AND EPISODES:")
-		for _, title := range titles {
+		for i := range titles {
+			title := &titles[i]
 			fmt.Printf("%s [%s] -> %s\n", title.Name, title.Category, title.Link)
 			for _, episode := range title.Episodes {
 				fmt.Printf("\t%s -> %s\n", episode.Name, episode.Link)
@@ -68,8 +70,8 @@ func GetEpisodes(titles []types.Title, flags cli.CLIFlags) []types.Title {
 }
 
 /* Given a TV series title `title`, return its list of episodes. */
-func GetTVEpisodes(title types.Title, flags cli.CLIFlags) []types.Episode {
-	var episodes []types.Episode
+func GetTVEpisodes(title *types.Title, flags cli.CLIFlags) []*types.Episode {
+	var episodes []*types.Episode
 
 	/* Base options for the scraper. */
 	scraperOpts := []func(*colly.Collector){
@@ -87,9 +89,10 @@ func GetTVEpisodes(title types.Title, flags cli.CLIFlags) []types.Episode {
 	/* Extract the episode's name and link. (TV-only) */
 	c.OnHTML("h3 > a[href]", func(e *colly.HTMLElement) {
 		link := e.Request.AbsoluteURL(e.Attr("href"))
-		episode := types.Episode{
-			Name: getEpisodeTitle(e.Text),
-			Link: link,
+		episode := &types.Episode{
+			Name:   getEpisodeTitle(e.Text),
+			Link:   link,
+			Images: &types.Images{},
 		}
 		episodes = append(episodes, episode)
 	})
@@ -124,8 +127,8 @@ func GetTVEpisodes(title types.Title, flags cli.CLIFlags) []types.Episode {
 }
 
 /* Given an Anime title `title`, return its list of episodes. */
-func GetAnimeEpisodes(title types.Title, flags cli.CLIFlags) []types.Episode {
-	var episodes []types.Episode
+func GetAnimeEpisodes(title *types.Title, flags cli.CLIFlags) []*types.Episode {
+	var episodes []*types.Episode
 
 	/* Base options for the scraper. */
 	scraperOpts := []func(*colly.Collector){
@@ -144,9 +147,10 @@ func GetAnimeEpisodes(title types.Title, flags cli.CLIFlags) []types.Episode {
 	c.OnHTML("a[href] > h3", func(e *colly.HTMLElement) {
 		href, _ := e.DOM.Parent().Attr("href")
 		link := e.Request.AbsoluteURL(href)
-		episode := types.Episode{
-			Name: getEpisodeTitle(e.Text) + " of " + title.Name, // Append title name (required for `getEpisodeByNumber()`)
-			Link: link,
+		episode := &types.Episode{
+			Name:   getEpisodeTitle(e.Text) + " of " + title.Name, // Append title name (required for `getEpisodeByNumber()`)
+			Link:   link,
+			Images: &types.Images{},
 		}
 		episodes = append(episodes, episode)
 	})

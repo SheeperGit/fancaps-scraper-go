@@ -2,11 +2,9 @@ package scraper
 
 import (
 	"fmt"
-	"math/rand"
 	"os"
 	"path"
 	"sync"
-	"time"
 
 	"github.com/gocolly/colly"
 	"sheeper.com/fancaps-scraper-go/pkg/cli"
@@ -20,20 +18,19 @@ const (
 	baseMovieURL = "https://cdni.fancaps.net/file/fancaps-movieimages/"
 )
 
+/* Maps a category to its base URL where its image URLs are stored. */
+var CategoryName = map[types.Category]string{
+	types.CategoryAnime: baseAnimeURL,
+	types.CategoryTV:    baseTVURL,
+	types.CategoryMovie: baseMovieURL,
+}
+
 /* Get images from titles `titles`. */
 func GetImages(titles []types.Title, flags cli.CLIFlags) {
 	var wg sync.WaitGroup
 
-	if flags.Debug {
-		fmt.Println("\nIMAGE LINKS VISITED:")
-	}
-
-	outputDir := createOutputDir(defaultOutputDir)
-
 	/* For each title... */
 	for i := range titles {
-		titleDir := createTitleDir(outputDir, titles[i].Name)
-
 		/* Handle movies seperately, since they have no episodes. */
 		if titles[i].Category == types.CategoryMovie {
 			scrapeMovieImages := func(i int) {
@@ -56,11 +53,9 @@ func GetImages(titles []types.Title, flags cli.CLIFlags) {
 		for j := range titles[i].Episodes {
 			/* Get the episode's images. */
 			scrapeImages := func(i, j int) {
-				imgDir := createEpisodeDir(titleDir, titles[i].Episodes[j].Name)
-
 				switch titles[i].Category {
 				case types.CategoryAnime:
-					GetAnimeImages(imgDir, titles[i].Episodes[j].Link, flags)
+					GetAnimeImages(&titles[i], titles[i].Episodes[j], flags)
 				case types.CategoryTV:
 					// GetTVImages(titles[i].Episodes[j].Link, flags)
 				default:
@@ -84,20 +79,26 @@ func GetImages(titles []types.Title, flags cli.CLIFlags) {
 		wg.Wait()
 	}
 
-	/* Debug: Print found titles and episodes. */
+	/* Debug: Print amount of found images per title/episode. */
 	if flags.Debug {
-		fmt.Println("\n\nFOUND TITLES AND EPISODES:")
-		for _, title := range titles {
-			fmt.Printf("%s [%s] -> %s\n", title.Name, title.Category, title.Link)
+		fmt.Println("\n\nFOUND IMAGES:")
+		for i := range titles {
+			title := &titles[i]
+			fmt.Printf("%s [%s] -> %d images\n", title.Name, title.Category, title.Images.GetImgCount())
+
+			if title.Category == types.CategoryMovie {
+				continue // Don't show movie episodes. They don't have any.
+			}
+
 			for _, episode := range title.Episodes {
-				fmt.Printf("\t%s -> %s\n", episode.Name, episode.Link)
+				fmt.Printf("\t%s -> %d images\n", episode.Name, episode.Images.GetImgCount())
 			}
 		}
 	}
 }
 
 /* Given an Anime episode `episode`, return its list of images as URLs. */
-func GetAnimeImages(imgDir string, link string, flags cli.CLIFlags) {
+func GetAnimeImages(title *types.Title, episode *types.Episode, flags cli.CLIFlags) {
 	/* Base options for the scraper. */
 	scraperOpts := []func(*colly.Collector){
 		colly.AllowedDomains("fancaps.net"),
@@ -127,11 +128,15 @@ func GetAnimeImages(imgDir string, link string, flags cli.CLIFlags) {
 		src := e.Attr("src")
 		file := path.Base(src)
 		imgURL := baseAnimeURL + file
-		saveImage(imgDir, imgURL)
 
-		/* Introduce random jitter after each saved image. */
-		jitter := time.Duration(rand.Intn(1500)+500) * time.Millisecond
-		time.Sleep(jitter)
+		if title.Category != types.CategoryMovie {
+			episode.Images.AddURL(imgURL)
+			episode.Images.IncrementImgCount()
+		} else {
+			title.Images.AddURL(imgURL)
+		}
+
+		title.Images.IncrementImgCount()
 	})
 
 	/*
@@ -146,7 +151,7 @@ func GetAnimeImages(imgDir string, link string, flags cli.CLIFlags) {
 	})
 
 	/* Start the collector on the title link. */
-	c.Visit(link)
+	c.Visit(episode.Link)
 
 	/* Wait until all asynchronous requests are complete. */
 	if flags.Async {

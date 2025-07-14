@@ -37,6 +37,7 @@ func GetTitles(searchURL string, catStats *types.CatStats, flags cli.CLIFlags) [
 			Category: category,
 			Name:     e.Text,
 			Link:     link,
+			Images:   &types.Images{},
 		}
 		titles = append(titles, title)
 		catStats.Increment(category)

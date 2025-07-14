@@ -7,16 +7,25 @@ import (
 
 /* A Movie, TV Series, or Anime title. */
 type Title struct {
-	Episodes []Episode // Episodes of the title.
-	Category Category  // Category of the title.
-	Name     string    // Name of the title.
-	Link     string    // Link to the title on fancaps.net.
+	Episodes []*Episode // Episodes of the title.
+	Category Category   // Category of the title.
+	Name     string     // Name of the title.
+	Link     string     // Link to the title on fancaps.net.
+	Images   *Images    // Image info about the title. (Non-empty for Movie Titles Only)
 }
 
 /* An episode of a title. */
 type Episode struct {
-	Name string // Name of the episode.
-	Link string // Link to the episode on fancaps.net.
+	Name   string  // Name of the episode.
+	Link   string  // Link to the episode on fancaps.net.
+	Images *Images // Image info about the episode. (Non-empty for Anime/TV Series Only)
+}
+
+/* Image info on either a title or episode. */
+type Images struct {
+	URLs     []string     // List of URLs to the images of a title or one of its episodes.
+	ImgCount uint32       // Amount of images associated with a title or episode.
+	mu       sync.RWMutex // Prevents bad writes from concurrent increments, while allowing multiple readers.
 }
 
 /* Enum for Categories. */
@@ -41,8 +50,8 @@ var CategoryName = map[Category]string{
 
 /* Thread-safe category amounts. */
 type CatStats struct {
-	mu   sync.RWMutex     // Prevents bad writes from concurrent increments, while allowing multiple readers.
 	amts map[Category]int // Amount of titles per category.
+	mu   sync.RWMutex     // Prevents bad writes from concurrent increments, while allowing multiple readers.
 }
 
 /* Returns a new category statistics struct. */
@@ -53,28 +62,28 @@ func NewCatStats() *CatStats {
 }
 
 /* Increments category `cat` by 1. */
-func (m *CatStats) Increment(cat Category) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+func (cs *CatStats) Increment(cat Category) {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
 
-	m.amts[cat]++
+	cs.amts[cat]++
 }
 
 /* Returns the amount of titles found for category `cat`. */
-func (m *CatStats) Get(cat Category) int {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+func (cs *CatStats) Get(cat Category) int {
+	cs.mu.RLock()
+	defer cs.mu.RUnlock()
 
-	return m.amts[cat]
+	return cs.amts[cat]
 }
 
 /* Returns a copy of the category amounts. */
-func (m *CatStats) Snapshot() map[Category]int {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+func (cs *CatStats) Snapshot() map[Category]int {
+	cs.mu.RLock()
+	defer cs.mu.RUnlock()
 
-	copy := make(map[Category]int, len(m.amts))
-	maps.Copy(copy, m.amts)
+	copy := make(map[Category]int, len(cs.amts))
+	maps.Copy(copy, cs.amts)
 
 	return copy
 }
@@ -95,16 +104,48 @@ func (cs *CatStats) Max() int {
 }
 
 /* Returns a list of categories with at least one found title. */
-func (c *CatStats) UsedCategories() []Category {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+func (cs *CatStats) UsedCategories() []Category {
+	cs.mu.RLock()
+	defer cs.mu.RUnlock()
 
 	var usedCats []Category
 	for cat := Category(0); cat < Category(len(CategoryName)); cat++ {
-		if c.amts[cat] != 0 {
+		if cs.amts[cat] != 0 {
 			usedCats = append(usedCats, cat)
 		}
 	}
 
 	return usedCats
+}
+
+/* Increments image count by 1. */
+func (imgs *Images) IncrementImgCount() {
+	imgs.mu.Lock()
+	defer imgs.mu.Unlock()
+
+	imgs.ImgCount++
+}
+
+/* Adds a URL. */
+func (imgs *Images) AddURL(url string) {
+	imgs.mu.Lock()
+	defer imgs.mu.Unlock()
+
+	imgs.URLs = append(imgs.URLs, url)
+}
+
+/* Returns the amount of images found. */
+func (imgs *Images) GetImgCount() uint32 {
+	imgs.mu.RLock()
+	defer imgs.mu.RUnlock()
+
+	return imgs.ImgCount
+}
+
+/* Returns the URLs of images found. */
+func (imgs *Images) GetImages() []string {
+	imgs.mu.RLock()
+	defer imgs.mu.RUnlock()
+
+	return imgs.URLs
 }

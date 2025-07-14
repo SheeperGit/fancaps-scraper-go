@@ -81,7 +81,7 @@ func SelectEpisodes(titles []types.Title, debug bool) []types.Title {
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "select episodes error: %v\ntry again.\n\n", err)
 			} else {
-				var selectedEpisodes []types.Episode
+				var selectedEpisodes []*types.Episode
 				lastFound := 0
 				for _, episodeNum := range episodeRange {
 					ep, index := getEpisodeByNumber(titles[i].Episodes, lastFound, episodeNum) // Only need to starting from the last found episode
@@ -118,7 +118,7 @@ Returns an episode from title `title` by the episode number `episodeNum`,
 starting from `start` and its index in `title`.
 Returns an empty set if not found.
 */
-func getEpisodeByNumber(episodes []types.Episode, start int, episodeNum int) (types.Episode, int) {
+func getEpisodeByNumber(episodes []*types.Episode, start int, episodeNum int) (*types.Episode, int) {
 	re := regexp.MustCompile(fmt.Sprintf(`^Episode.*?\b%d\b.*of`, episodeNum))
 
 	for _, ep := range episodes[start:] {
@@ -128,14 +128,14 @@ func getEpisodeByNumber(episodes []types.Episode, start int, episodeNum int) (ty
 		start += 1
 	}
 
-	return types.Episode{}, -1
+	return &types.Episode{}, -1
 }
 
 /*
 Returns the last episode number of episodes `episodes`.
 Returns -1, if the last episode number could not be found.
 */
-func getLastEpisodeNumber(episodes []types.Episode) int {
+func getLastEpisodeNumber(episodes []*types.Episode) int {
 	if len(episodes) == 0 {
 		return -1
 	}
@@ -160,7 +160,7 @@ func getLastEpisodeNumber(episodes []types.Episode) int {
 }
 
 /* Returns true, if `e` is in `episodes`, and returns false otherwise. */
-func containsEpisode(episodes []types.Episode, e types.Episode) bool {
+func containsEpisode(episodes []*types.Episode, e *types.Episode) bool {
 	for _, episode := range episodes {
 		if episode.Link == e.Link {
 			return true
