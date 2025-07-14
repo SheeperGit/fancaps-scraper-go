@@ -19,7 +19,7 @@ const (
 )
 
 /* Maps a category to its base URL where its image URLs are stored. */
-var CategoryName = map[types.Category]string{
+var CategoryURLMap = map[types.Category]string{
 	types.CategoryAnime: baseAnimeURL,
 	types.CategoryTV:    baseTVURL,
 	types.CategoryMovie: baseMovieURL,
@@ -34,7 +34,7 @@ func GetImages(titles []types.Title, flags cli.CLIFlags) {
 		/* Handle movies seperately, since they have no episodes. */
 		if titles[i].Category == types.CategoryMovie {
 			scrapeMovieImages := func(i int) {
-				// GetMovieImages(titles[i].Link, flags)
+				GetTitleImages(&titles[i], flags)
 			}
 
 			if flags.Async {
@@ -53,13 +53,12 @@ func GetImages(titles []types.Title, flags cli.CLIFlags) {
 		for j := range titles[i].Episodes {
 			/* Get the episode's images. */
 			scrapeImages := func(i, j int) {
-				switch titles[i].Category {
-				case types.CategoryAnime:
-					GetAnimeImages(&titles[i], titles[i].Episodes[j], flags)
-				case types.CategoryTV:
-					// GetTVImages(titles[i].Episodes[j].Link, flags)
+				title := &titles[i]
+				switch title.Category {
+				case types.CategoryAnime, types.CategoryTV:
+					GetEpisodeImages(title.Episodes[j], title, flags)
 				default:
-					fmt.Fprintf(os.Stderr, "Unknown Category: %s (%s) -> [%s]\n", titles[i].Name, titles[i].Link, titles[i].Category)
+					fmt.Fprintf(os.Stderr, "Unknown Category: %s (%s) -> [%s]\n", title.Name, title.Link, title.Category)
 				}
 			}
 
@@ -97,8 +96,16 @@ func GetImages(titles []types.Title, flags cli.CLIFlags) {
 	}
 }
 
-/* Given an Anime episode `episode`, return its list of images as URLs. */
-func GetAnimeImages(title *types.Title, episode *types.Episode, flags cli.CLIFlags) {
+/*
+Given a title `title`, collect its list of images as URLs.
+
+Intended to be used only alongside titles with *NO* episodes. (e.g., Movies)
+
+`title` will have its URL list and image count updated directly from the Title struct.
+See `GetEpisodeImages()` for more details on how to handle image collection for titles
+with episodes.
+*/
+func GetTitleImages(title *types.Title, flags cli.CLIFlags) {
 	/* Base options for the scraper. */
 	scraperOpts := []func(*colly.Collector){
 		colly.AllowedDomains("fancaps.net"),
@@ -117,26 +124,96 @@ func GetAnimeImages(title *types.Title, episode *types.Episode, flags cli.CLIFla
 		req.Headers.Set("Referer", "https://fancaps.net")
 	})
 
-	/* Extract an episode's images. (Anime-only) */
+	/* Extract a title's images. */
 	c.OnHTML("div.row img.imageFade", func(e *colly.HTMLElement) {
 		/* Skip "Top Images" */
 		if e.DOM.ParentsFiltered("div.topImages").Length() > 0 {
 			return
 		}
 
-		/* Save Image. */
+		/* Get image URL. */
 		src := e.Attr("src")
 		file := path.Base(src)
-		imgURL := baseAnimeURL + file
+		imgURL := CategoryURLMap[title.Category] + file
 
-		if title.Category != types.CategoryMovie {
-			episode.Images.AddURL(imgURL)
-			episode.Images.IncrementImgCount()
-		} else {
-			title.Images.AddURL(imgURL)
+		/* Add URL to list and update image count. */
+		title.Images.AddURL(imgURL)
+		title.Images.IncrementImgCount()
+
+		if flags.Debug {
+			fmt.Printf("%s [%s] image found! (%s)\n", title.Name, title.Category, imgURL)
+		}
+	})
+
+	/*
+		If there is a next page,
+		visit it to re-trigger episode image extraction. (Anime-only)
+	*/
+	c.OnHTML("ul.pagination > li > a[href]", func(e *colly.HTMLElement) {
+		nextPageURL := e.Request.AbsoluteURL(e.Attr("href"))
+		if e.Text == "»" && nextPageURL != "#" {
+			c.Visit(nextPageURL)
+		}
+	})
+
+	/* Start the collector on the title link. */
+	c.Visit(title.Link)
+
+	/* Wait until all asynchronous requests are complete. */
+	if flags.Async {
+		c.Wait()
+	}
+}
+
+/*
+Given an episode `episode`, collect its list of images as URLs
+and set the state of its title `title`, accordingly.
+
+Intended to be used only alongside titles with episodes. (e.g., Anime, TV Series)
+
+`title` will only have its image count updated, its URL list will
+be left alone. This is intentional, as only Movie titles will directly store all
+of their URLs in the Title struct. See `GetTitleImages()` for more details.
+*/
+func GetEpisodeImages(episode *types.Episode, title *types.Title, flags cli.CLIFlags) {
+	/* Base options for the scraper. */
+	scraperOpts := []func(*colly.Collector){
+		colly.AllowedDomains("fancaps.net"),
+		colly.UserAgent("Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36"),
+	}
+
+	/* Enable asynchronous mode. */
+	if flags.Async {
+		scraperOpts = append(scraperOpts, colly.Async(true))
+	}
+
+	/* Create a Collector for FanCaps. */
+	c := colly.NewCollector(scraperOpts...)
+
+	c.OnRequest(func(req *colly.Request) {
+		req.Headers.Set("Referer", "https://fancaps.net")
+	})
+
+	/* Extract an episode's images. */
+	c.OnHTML("div.row img.imageFade", func(e *colly.HTMLElement) {
+		/* Skip "Top Images" */
+		if e.DOM.ParentsFiltered("div.topImages").Length() > 0 {
+			return
 		}
 
+		/* Get image URL. */
+		src := e.Attr("src")
+		file := path.Base(src)
+		imgURL := CategoryURLMap[title.Category] + file
+
+		/* Add URL to list and update image count. */
+		episode.Images.AddURL(imgURL)
+		episode.Images.IncrementImgCount()
 		title.Images.IncrementImgCount()
+
+		if flags.Debug {
+			fmt.Printf("%s - %s [%s] image found! (%s)\n", title.Name, episode.Name, title.Category, imgURL)
+		}
 	})
 
 	/*
