@@ -13,8 +13,8 @@ import (
 )
 
 /* Given a URL `searchURL`, return all titles found by FanCaps. */
-func GetTitles(searchURL string, catStats *types.CatStats, flags cli.CLIFlags) []types.Title {
-	var titles []types.Title
+func GetTitles(searchURL string, catStats *types.CatStats, flags cli.CLIFlags) []*types.Title {
+	var titles []*types.Title
 
 	/* Base options for the scraper. */
 	scraperOpts := []func(*colly.Collector){
@@ -33,7 +33,7 @@ func GetTitles(searchURL string, catStats *types.CatStats, flags cli.CLIFlags) [
 	c.OnHTML("h4 > a", func(e *colly.HTMLElement) {
 		link := e.Request.AbsoluteURL(e.Attr("href"))
 		category := getCategory(link)
-		title := types.Title{
+		title := &types.Title{
 			Category: category,
 			Name:     e.Text,
 			Link:     link,

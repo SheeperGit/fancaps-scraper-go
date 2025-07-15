@@ -26,37 +26,36 @@ var CategoryURLMap = map[types.Category]string{
 }
 
 /* Get images from titles `titles`. */
-func GetImages(titles []types.Title, flags cli.CLIFlags) {
+func GetImages(titles []*types.Title, flags cli.CLIFlags) {
 	var wg sync.WaitGroup
 
 	/* For each title... */
-	for i := range titles {
+	for _, title := range titles {
 		/* Handle movies seperately, since they have no episodes. */
-		if titles[i].Category == types.CategoryMovie {
-			scrapeMovieImages := func(i int) {
-				GetTitleImages(&titles[i], flags)
+		if title.Category == types.CategoryMovie {
+			scrapeMovieImages := func(title *types.Title) {
+				GetTitleImages(title, flags)
 			}
 
 			if flags.Async {
 				wg.Add(1)
-				go func(i int) {
+				go func(t *types.Title) {
 					defer wg.Done()
-					scrapeMovieImages(i)
-				}(i)
+					scrapeMovieImages(title)
+				}(title)
 			} else {
-				scrapeMovieImages(i)
+				scrapeMovieImages(title)
 			}
 			continue // Go to the next title.
 		}
 
 		/* For each episode... */
-		for j := range titles[i].Episodes {
+		for _, episode := range title.Episodes {
 			/* Get the episode's images. */
-			scrapeImages := func(i, j int) {
-				title := &titles[i]
+			scrapeImages := func(title *types.Title, episode *types.Episode) {
 				switch title.Category {
 				case types.CategoryAnime, types.CategoryTV:
-					GetEpisodeImages(title.Episodes[j], title, flags)
+					GetEpisodeImages(episode, title, flags)
 				default:
 					fmt.Fprintf(os.Stderr, "Unknown Category: %s (%s) -> [%s]\n", title.Name, title.Link, title.Category)
 				}
@@ -64,12 +63,12 @@ func GetImages(titles []types.Title, flags cli.CLIFlags) {
 
 			if flags.Async {
 				wg.Add(1)
-				go func(i, j int) {
+				go func(t *types.Title, e *types.Episode) {
 					defer wg.Done()
-					scrapeImages(i, j)
-				}(i, j)
+					scrapeImages(t, e)
+				}(title, episode)
 			} else {
-				scrapeImages(i, j)
+				scrapeImages(title, episode)
 			}
 		}
 	}
@@ -81,8 +80,7 @@ func GetImages(titles []types.Title, flags cli.CLIFlags) {
 	/* Debug: Print amount of found images per title/episode. */
 	if flags.Debug {
 		fmt.Println("\n\nFOUND IMAGES:")
-		for i := range titles {
-			title := &titles[i]
+		for _, title := range titles {
 			fmt.Printf("%s [%s] -> %d images\n", title.Name, title.Category, title.Images.GetImgCount())
 
 			if title.Category == types.CategoryMovie {

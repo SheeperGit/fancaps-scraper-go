@@ -12,7 +12,7 @@ import (
 )
 
 /* Get episodes from titles `titles`. */
-func GetEpisodes(titles []types.Title, flags cli.CLIFlags) []types.Title {
+func GetEpisodes(titles []*types.Title, flags cli.CLIFlags) []*types.Title {
 	var wg sync.WaitGroup
 
 	if flags.Debug {
@@ -20,8 +20,7 @@ func GetEpisodes(titles []types.Title, flags cli.CLIFlags) []types.Title {
 	}
 
 	/* Get the episodes for each title. */
-	for i := range titles {
-		title := &titles[i]
+	for _, title := range titles {
 		/*
 			From title category, run corresponding episode scraper.
 			Note: Movies do not have episodes and thus do not require episode scraping.
@@ -35,16 +34,16 @@ func GetEpisodes(titles []types.Title, flags cli.CLIFlags) []types.Title {
 			case types.CategoryMovie:
 				// Do nothing
 			default:
-				fmt.Fprintf(os.Stderr, "Unknown Category: %s (%s) -> [%s]\n", titles[i].Name, titles[i].Link, titles[i].Category)
+				fmt.Fprintf(os.Stderr, "Unknown Category: %s (%s) -> [%s]\n", title.Name, title.Link, title.Category)
 			}
 		}
 
 		if flags.Async {
 			wg.Add(1)
-			go func(i int) {
+			go func(title *types.Title) {
 				defer wg.Done()
 				scrapeEpisodes(title)
-			}(i)
+			}(title)
 		} else {
 			scrapeEpisodes(title)
 		}
@@ -57,8 +56,7 @@ func GetEpisodes(titles []types.Title, flags cli.CLIFlags) []types.Title {
 	/* Debug: Print found titles and episodes. */
 	if flags.Debug {
 		fmt.Println("\n\nFOUND TITLES AND EPISODES:")
-		for i := range titles {
-			title := &titles[i]
+		for _, title := range titles {
 			fmt.Printf("%s [%s] -> %s\n", title.Name, title.Category, title.Link)
 			for _, episode := range title.Episodes {
 				fmt.Printf("\t%s -> %s\n", episode.Name, episode.Link)

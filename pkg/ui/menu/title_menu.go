@@ -83,14 +83,14 @@ type titleModel struct {
 	/* Base Title Model fields. */
 
 	Tabs       []types.Category // Menu tabs.
-	TabContent []types.Title    // Active tab content.
+	TabContent []*types.Title   // Active tab content.
 	activeTab  types.Category   // Currently viewed tab.
 	keys       titleKeyMap      // Menu Keybinds.
 	help       help.Model       // Help view.
 	inputStyle lipgloss.Style   // Input style.
 	cursor     int              // Position of current selection.
-	choices    []types.Title    // Available choices.
-	selected   []types.Title    // Selected choices.
+	choices    []*types.Title   // Available choices.
+	selected   []*types.Title   // Selected choices.
 	confirmed  bool             // True if the user confirmed their selection, false otherwise.
 	errMsg     string           // Error message. If empty, no errors.
 
@@ -103,7 +103,7 @@ type titleModel struct {
 }
 
 /* Initializes the title model. */
-func initialTitleModel(titles []types.Title, catStats *types.CatStats) titleModel {
+func initialTitleModel(titles []*types.Title, catStats *types.CatStats) titleModel {
 	contentPadding := getContentPadding(menuLineFormat)
 	contentWidth := lipgloss.Width(windowStyle.Render(getLongestTitle(titles))) + contentPadding - windowStyle.GetHorizontalPadding()
 
@@ -114,13 +114,13 @@ func initialTitleModel(titles []types.Title, catStats *types.CatStats) titleMode
 
 	return titleModel{
 		Tabs:       tabs,
-		TabContent: []types.Title{},
+		TabContent: []*types.Title{},
 		activeTab:  activeTab,
 		keys:       titleKeys,
 		help:       help.New(),
 		inputStyle: inputStyle,
 		choices:    titles,
-		selected:   []types.Title{},
+		selected:   []*types.Title{},
 
 		catStats:     catStats,
 		menuWidth:    menuWidth,
@@ -313,7 +313,7 @@ func getContentPadding(s string) int {
 Returns the longest title or episode name from titles `titles`.
 (Useful for determining the maximum width with which to render the Title Menu.)
 */
-func getLongestTitle(titles []types.Title) string {
+func getLongestTitle(titles []*types.Title) string {
 	maxWidth := ""
 
 	for _, title := range titles {
@@ -331,7 +331,7 @@ func getLongestTitle(titles []types.Title) string {
 }
 
 /* Returns true, if `t` is in `titles`, and returns false otherwise. */
-func containsTitle(titles []types.Title, t types.Title) bool {
+func containsTitle(titles []*types.Title, t *types.Title) bool {
 	for _, title := range titles {
 		if title.Link == t.Link {
 			return true
@@ -346,7 +346,7 @@ Launches the Title Menu.
 Returns non-empty selected titles, or exits if the user quits.
 If `debug` is enabled, then this function prints out the selected titles.
 */
-func LaunchTitleMenu(titles []types.Title, tabs []types.Category, catStats *types.CatStats, debug bool) []types.Title {
+func LaunchTitleMenu(titles []*types.Title, tabs []types.Category, catStats *types.CatStats, debug bool) []*types.Title {
 	p := tea.NewProgram(initialTitleModel(titles, catStats))
 	if m, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Title Menu has encountered an error: %v", err)
@@ -373,14 +373,14 @@ func LaunchTitleMenu(titles []types.Title, tabs []types.Category, catStats *type
 		}
 	}
 
-	return []types.Title{}
+	return []*types.Title{}
 }
 
 /*
 Adds/removes the title `title` to/from the selection of title model `m`.
 Uses the URL of the title to check equality.
 */
-func (m *titleModel) toggle(title types.Title) {
+func (m *titleModel) toggle(title *types.Title) {
 	for i, t := range m.selected {
 		if t.Link == title.Link {
 			m.selected = append(m.selected[:i], m.selected[i+1:]...)
@@ -393,7 +393,7 @@ func (m *titleModel) toggle(title types.Title) {
 /* Adds/removes all titles to/from the selection of title model `m` on the active tab. */
 func (m *titleModel) toggleAll() {
 	/* Get all titles from the active tab. */
-	var activeTabCategories []types.Title
+	var activeTabCategories []*types.Title
 	for _, t := range m.choices {
 		if t.Category == m.activeTab {
 			activeTabCategories = append(activeTabCategories, t)
@@ -411,7 +411,7 @@ func (m *titleModel) toggleAll() {
 
 	if allSelected {
 		/* New selection becomes all previously selected titles excluding all titles from the active tab. */
-		var newSelected []types.Title
+		var newSelected []*types.Title
 		for _, t := range m.selected {
 			if t.Category != m.activeTab {
 				newSelected = append(newSelected, t)

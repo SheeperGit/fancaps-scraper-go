@@ -29,7 +29,7 @@ var SearchHelpPrompt = strings.Join([]string{
 }, "\n")
 
 /* Returns the rendered text for the episode selection of title `title`. */
-func getSelectEpisodeHelp(title types.Title) string {
+func getSelectEpisodeHelp(title *types.Title) string {
 	max := strconv.Itoa(getLastEpisodeNumber(title.Episodes))
 
 	return strings.Join([]string{
@@ -64,37 +64,37 @@ func PromptUser(promptText, helpText string) string {
 Returns a list of titles with episodes selected by the user from titles `titles`.
 If `debug` is enabled, print selected episodes and their titles.
 */
-func SelectEpisodes(titles []types.Title, debug bool) []types.Title {
-	for i := range titles {
+func SelectEpisodes(titles []*types.Title, debug bool) []*types.Title {
+	for _, title := range titles {
 		err := fmt.Errorf("selectEpisodes error placeholder: you shouldn't be here")
 
 		/* For each (non-movie) title, prompt the user for an episode range. */
-		for titles[i].Category != types.CategoryMovie && err != nil {
-			selectEpisodePrompt := "Enter Episode Range for " + titles[i].Name + ": "
-			userRange := PromptUser(selectEpisodePrompt, getSelectEpisodeHelp(titles[i]))
+		for title.Category != types.CategoryMovie && err != nil {
+			selectEpisodePrompt := "Enter Episode Range for " + title.Name + ": "
+			userRange := PromptUser(selectEpisodePrompt, getSelectEpisodeHelp(title))
 			if userRange == "" { // Default to all episodes if user doesn't specify a range.
-				userRange = "1-" + strconv.Itoa(getLastEpisodeNumber(titles[i].Episodes))
+				userRange = "1-" + strconv.Itoa(getLastEpisodeNumber(title.Episodes))
 			}
 
 			var episodeRange []int
-			episodeRange, err = seq.ParseSequenceString(userRange, len(titles[i].Episodes), debug)
+			episodeRange, err = seq.ParseSequenceString(userRange, len(title.Episodes), debug)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "select episodes error: %v\ntry again.\n\n", err)
 			} else {
 				var selectedEpisodes []*types.Episode
 				lastFound := 0
 				for _, episodeNum := range episodeRange {
-					ep, index := getEpisodeByNumber(titles[i].Episodes, lastFound, episodeNum) // Only need to starting from the last found episode
+					ep, index := getEpisodeByNumber(title.Episodes, lastFound, episodeNum) // Only need to starting from the last found episode
 					if ep.Name != "" && !containsEpisode(selectedEpisodes, ep) {
 						selectedEpisodes = append(selectedEpisodes, ep)
 						lastFound = index
 					} else if containsEpisode(selectedEpisodes, ep) {
-						fmt.Fprintf(os.Stderr, "select episodes warning: episode %d already selected for %s\nskipping...\n\n", episodeNum, titles[i].Name)
+						fmt.Fprintf(os.Stderr, "select episodes warning: episode %d already selected for %s\nskipping...\n\n", episodeNum, title.Name)
 					} else {
-						fmt.Fprintf(os.Stderr, "select episodes error: couldn't find episode %d in %s[%d-%d]\nskipping...\n\n", episodeNum, titles[i].Name, lastFound, len(titles[i].Episodes))
+						fmt.Fprintf(os.Stderr, "select episodes error: couldn't find episode %d in %s[%d-%d]\nskipping...\n\n", episodeNum, title.Name, lastFound, len(title.Episodes))
 					}
 				}
-				titles[i].Episodes = selectedEpisodes
+				title.Episodes = selectedEpisodes
 				err = nil
 			}
 		}
