@@ -91,6 +91,7 @@ func GetImages(titles []*types.Title, flags cli.CLIFlags) {
 				fmt.Printf("\t%s -> %d images\n", episode.Name, episode.Images.GetImgCount())
 			}
 		}
+		fmt.Printf("\n\n") // Make room for the progress bar.
 	}
 }
 
@@ -107,7 +108,6 @@ func GetTitleImages(title *types.Title, flags cli.CLIFlags) {
 	/* Base options for the scraper. */
 	scraperOpts := []func(*colly.Collector){
 		colly.AllowedDomains("fancaps.net"),
-		colly.UserAgent("Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36"),
 	}
 
 	/* Enable asynchronous mode. */
@@ -117,10 +117,6 @@ func GetTitleImages(title *types.Title, flags cli.CLIFlags) {
 
 	/* Create a Collector for FanCaps. */
 	c := colly.NewCollector(scraperOpts...)
-
-	c.OnRequest(func(req *colly.Request) {
-		req.Headers.Set("Referer", "https://fancaps.net")
-	})
 
 	/* Extract a title's images. */
 	c.OnHTML("div.row img.imageFade", func(e *colly.HTMLElement) {
@@ -177,7 +173,6 @@ func GetEpisodeImages(episode *types.Episode, title *types.Title, flags cli.CLIF
 	/* Base options for the scraper. */
 	scraperOpts := []func(*colly.Collector){
 		colly.AllowedDomains("fancaps.net"),
-		colly.UserAgent("Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36"),
 	}
 
 	/* Enable asynchronous mode. */
@@ -187,10 +182,6 @@ func GetEpisodeImages(episode *types.Episode, title *types.Title, flags cli.CLIF
 
 	/* Create a Collector for FanCaps. */
 	c := colly.NewCollector(scraperOpts...)
-
-	c.OnRequest(func(req *colly.Request) {
-		req.Headers.Set("Referer", "https://fancaps.net")
-	})
 
 	/* Extract an episode's images. */
 	c.OnHTML("div.row img.imageFade", func(e *colly.HTMLElement) {

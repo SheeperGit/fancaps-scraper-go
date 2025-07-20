@@ -23,9 +23,10 @@ type Episode struct {
 
 /* Image info on either a title or episode. */
 type Images struct {
-	URLs     []string     // List of URLs to the images of a title or one of its episodes.
-	ImgCount uint32       // Amount of images associated with a title or episode.
-	mu       sync.RWMutex // Prevents bad writes from concurrent increments, while allowing multiple readers.
+	URLs         []string     // List of URLs to the images of a title or one of its episodes.
+	ImgCount     uint32       // Amount of images associated with a title or episode.
+	AmtProcessed uint32       // Amount of images processed. (Downloaded, skipped, or errored out.)
+	mu           sync.RWMutex // Prevents bad writes from concurrent increments, while allowing multiple readers.
 }
 
 /* Enum for Categories. */
@@ -126,12 +127,28 @@ func (imgs *Images) IncrementImgCount() {
 	imgs.ImgCount++
 }
 
+/* Increments image count by 1. */
+func (imgs *Images) IncrementAmtProcessed() {
+	imgs.mu.Lock()
+	defer imgs.mu.Unlock()
+
+	imgs.AmtProcessed++
+}
+
 /* Adds a URL. */
 func (imgs *Images) AddURL(url string) {
 	imgs.mu.Lock()
 	defer imgs.mu.Unlock()
 
 	imgs.URLs = append(imgs.URLs, url)
+}
+
+/* Returns the URLs of images found. */
+func (imgs *Images) GetImages() []string {
+	imgs.mu.RLock()
+	defer imgs.mu.RUnlock()
+
+	return imgs.URLs
 }
 
 /* Returns the amount of images found. */
@@ -143,9 +160,9 @@ func (imgs *Images) GetImgCount() uint32 {
 }
 
 /* Returns the URLs of images found. */
-func (imgs *Images) GetImages() []string {
+func (imgs *Images) GetAmtProcessed() uint32 {
 	imgs.mu.RLock()
 	defer imgs.mu.RUnlock()
 
-	return imgs.URLs
+	return imgs.AmtProcessed
 }

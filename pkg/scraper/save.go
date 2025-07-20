@@ -4,23 +4,143 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
+
+	"sheeper.com/fancaps-scraper-go/pkg/cli"
+	"sheeper.com/fancaps-scraper-go/pkg/types"
+	"sheeper.com/fancaps-scraper-go/pkg/ui/progressbar"
 )
 
-const defaultOutputDir = "output"
+const (
+	defaultOutputDir  = "output" // Default output directory name.
+	defaultMaxWorkers = 3        // Default maximum amount of titles or episodes to download images from in parallel.
+	defaultMinDelay   = 1000     // Default minimum delay (in milliseconds) after every new image download request.
+	defaultRandDelay  = 5000     // Default maximum random delay (in milliseconds) after every new image download request.
+)
+
+var (
+	launchedWorkers = 0        // Number of image download workers launched.
+	launchMu        sync.Mutex // Prevents bad writes to `launchedWorkers`.
+)
+
+/* Download images from titles `titles`. */
+func DownloadImages(titles []*types.Title, flags cli.CLIFlags) {
+	sema := make(chan struct{}, defaultMaxWorkers)
+	var wg sync.WaitGroup
+	outputDir := createOutputDir(defaultOutputDir)
+
+	downloadImage := func(imgDir string, url string, titleImages, episodeImages *types.Images) {
+		sent := saveImage(imgDir, url)
+
+		if episodeImages != nil {
+			episodeImages.IncrementAmtProcessed()
+		}
+		titleImages.IncrementAmtProcessed()
+
+		progressbar.ShowProgress(titles)
+
+		/* Only delay the next image request if one was sent in the first place. */
+		if sent {
+			jitterDelay(defaultMinDelay, defaultRandDelay)
+		}
+	}
+
+	downloadImageAsync := func(imgDir, url string, titleImages, episodeImages *types.Images) {
+		wg.Add(1)
+		sema <- struct{}{}
+		go func(url string) {
+			/* Update the number of launched workers. */
+			launchMu.Lock()
+			workerNum := launchedWorkers
+			if workerNum < defaultMaxWorkers {
+				launchedWorkers++
+			}
+			launchMu.Unlock()
+
+			/* Delay the workers slightly for the first time. */
+			if workerNum < defaultMaxWorkers {
+				jitterDelay(workerNum*500, 1000)
+			}
+
+			defer wg.Done()
+			defer func() { <-sema }()
+			downloadImage(imgDir, url, titleImages, episodeImages)
+		}(url)
+	}
+
+	fmt.Println(":: Showing progress...")
+
+	/* For each title... */
+	for _, title := range titles {
+		titleDir := createTitleDir(outputDir, title.Name)
+
+		/* Handle movies seperately, since they have no episodes. */
+		if title.Category == types.CategoryMovie {
+			URLs := title.Images.GetImages()
+			for _, url := range URLs {
+				if flags.Async {
+					downloadImageAsync(titleDir, url, title.Images, nil)
+				} else {
+					downloadImage(titleDir, url, title.Images, nil)
+				}
+			}
+
+			continue // Go to next title.
+		}
+
+		/* For each episode... */
+		for _, episode := range title.Episodes {
+			imgDir := createEpisodeDir(titleDir, episode.Name)
+
+			URLs := episode.Images.GetImages()
+			for _, url := range URLs {
+				if flags.Async {
+					downloadImageAsync(imgDir, url, title.Images, episode.Images)
+				} else {
+					downloadImage(imgDir, url, title.Images, episode.Images)
+				}
+			}
+		}
+	}
+
+	if flags.Async {
+		wg.Wait()
+	}
+}
+
+/*
+Sleeps for a minimum of `minDelay` milliseconds and a random amount
+of milliseconds ranging from 0 milliseconds (no random delay) to
+`randDelay` milliseconds. Returns the amount of time slept.
+
+In this way, `randDelay` acts as the maximum amount of random delay possible
+(in milliseconds).
+*/
+func jitterDelay(minDelay int, randDelay int) time.Duration {
+	d := time.Duration(minDelay) * time.Millisecond
+	r := time.Duration(rand.Intn(randDelay)) * time.Millisecond
+	jitter := d + r
+
+	time.Sleep(jitter)
+
+	return jitter
+}
 
 /*
 Returns the path to a newly created output directory at `dirname` to store the scraped images.
 
-Anime images will be saved to "./dirname/<Anime_Title_Name>/<Anime_Episode_Name>/".
+Anime images will be saved to "./`dirname`/<Anime_Title_Name>/<Anime_Episode_Name>/".
 
-TV Series images will be saved to "./dirname/<TV_Title_Name>/<TV_Episode_Name>/".
+TV Series images will be saved to "./`dirname`/<TV_Title_Name>/<TV_Episode_Name>/".
 
-Movie images will be saved to "./dirname/<Movie_Name>/".
+Movie images will be saved to "./`dirname`/<Movie_Name>/".
 */
 func createOutputDir(dirname string) string {
 	// TODO: Allow user to specify path and check that it exists on flag creation.
@@ -66,61 +186,69 @@ func createEpisodeDir(titleDir string, episodeName string) string {
 }
 
 /*
-Saves the image found at `url` to the directory `imgDir`.
+Saves the image found at `url` to the directory `imgDir`,
+and returns whether the request to `url` was made.
+
 Although not strictly enforced, `imgDir` is expected to refer to an "Episode directory"
 for Anime and TV Series titles or a "Title directory" for Movie titles.
 Prints errors for locating the image, file creation, or copying content to a file, if encountered.
 */
-func saveImage(imgDir string, url string) {
+func saveImage(imgDir string, url string) bool {
+	imgFilename := path.Base(url)
+	imgPath := filepath.Join(imgDir, imgFilename)
+	sent := false
+
+	/* If file already exists, don't overwrite and print an error. */
+	if _, err := os.Stat(imgPath); err == nil {
+		// fmt.Fprintf(os.Stderr, "Skipping existing file: %s\n", imgPath)
+		return sent
+	} else if !os.IsNotExist(err) {
+		// fmt.Fprintf(os.Stderr, "Failed to stat file (%s): %v\n", imgPath, err)
+		return sent
+	}
+
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to create HTTP request: %v\n", err)
-		return
+		// fmt.Fprintf(os.Stderr, "Failed to create HTTP request: %v\n", err)
+		return sent
 	}
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36")
 	req.Header.Set("Referer", "https://fancaps.net")
 
 	client := &http.Client{}
 	res, err := client.Do(req)
+	sent = true
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to get HTTP response: %v\n", err)
-		return
+		// fmt.Fprintf(os.Stderr, "Failed to perform HTTP request: %v\n", err)
+		return sent
 	}
 	defer res.Body.Close()
 
-	if res.StatusCode != http.StatusOK {
-		fmt.Fprintf(os.Stderr, "Bad status code: %d for URL: %s\n", res.StatusCode, url)
-		return
-	}
-
-	imgFilename := path.Base(url)
-	imgPath := filepath.Join(imgDir, imgFilename)
-
-	/* If file already exists, don't overwrite and print an error. */
-	if _, err := os.Stat(imgPath); err == nil {
-		fmt.Fprintf(os.Stderr, "Skipping existing file: %s\n", imgPath)
-		return
-	} else if !os.IsNotExist(err) {
-		fmt.Fprintf(os.Stderr, "Failed to stat file (%s): %v\n", imgPath, err)
-		return
+	if res.StatusCode == http.StatusTooManyRequests {
+		fmt.Fprintln(os.Stderr, "You are being rate-limited. Try again later.")
+		fmt.Fprintln(os.Stderr, "Hint: Try setting `--max-download-threads` to a lower value.")
+		os.Exit(2)
+	} else if res.StatusCode != http.StatusOK {
+		// fmt.Fprintf(os.Stderr, "Bad status code: %d for URL: %s\n", res.StatusCode, url)
+		return sent
 	}
 
 	/* Open file to copy image contents to. */
 	file, err := os.Create(imgPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to create file (%s): %v\n", imgPath, err)
-		return
+		// fmt.Fprintf(os.Stderr, "Failed to create file (%s): %v\n", imgPath, err)
+		return sent
 	}
 	defer file.Close()
 
 	/* Copy the response body to the file. */
 	_, err = io.Copy(file, res.Body)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to copy image contents to file (%s): %v\n", imgPath, err)
-		return
+		// fmt.Fprintf(os.Stderr, "Failed to copy image contents to file (%s): %v\n", imgPath, err)
+		return sent
 	}
 
-	fmt.Printf("%s downloaded successfully!\n", imgPath)
+	return sent
 }
 
 /* Returns a safe directory name for directory creation on all platforms. */
