@@ -62,6 +62,7 @@ func GetEpisodes(titles []*types.Title, flags cli.CLIFlags) []*types.Title {
 				fmt.Printf("\t%s -> %s\n", episode.Name, episode.Link)
 			}
 		}
+		fmt.Printf("\n\n") // Make room for episode range user prompt.
 	}
 
 	return titles

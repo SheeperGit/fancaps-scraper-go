@@ -103,14 +103,15 @@ type titleModel struct {
 }
 
 /* Initializes the title model. */
-func initialTitleModel(titles []*types.Title, catStats *types.CatStats) titleModel {
+func initialTitleModel(titles []*types.Title) titleModel {
 	contentPadding := getContentPadding(menuLineFormat)
 	contentWidth := lipgloss.Width(windowStyle.Render(getLongestTitle(titles))) + contentPadding - windowStyle.GetHorizontalPadding()
 
+	catStats := types.GetCatStats(titles)
 	tabs := catStats.UsedCategories()
 	activeTab := tabs[0]
 	menuWidth := lipgloss.Width(getTabRow(tabs, activeTab, contentWidth)) - windowStyle.GetHorizontalFrameSize()
-	menuHeight := catStats.Max() + windowStyle.GetVerticalFrameSize()
+	menuHeight := catStats.Max + windowStyle.GetVerticalFrameSize()
 
 	return titleModel{
 		Tabs:       tabs,
@@ -346,8 +347,8 @@ Launches the Title Menu.
 Returns non-empty selected titles, or exits if the user quits.
 If `debug` is enabled, then this function prints out the selected titles.
 */
-func LaunchTitleMenu(titles []*types.Title, tabs []types.Category, catStats *types.CatStats, debug bool) []*types.Title {
-	p := tea.NewProgram(initialTitleModel(titles, catStats))
+func LaunchTitleMenu(titles []*types.Title, tabs []types.Category, debug bool) []*types.Title {
+	p := tea.NewProgram(initialTitleModel(titles))
 	if m, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Title Menu has encountered an error: %v", err)
 		os.Exit(1)
@@ -491,7 +492,7 @@ func (m *titleModel) getTabStartIndex() int {
 		if cat == m.activeTab {
 			break
 		}
-		tabStartIndex += m.catStats.Get(cat)
+		tabStartIndex += m.catStats.Amts[cat]
 	}
 
 	return tabStartIndex
@@ -503,7 +504,7 @@ or wrap-around to the end of the list of choices.
 */
 func (m *titleModel) setCursorWrapUp() {
 	if m.cursor <= 0 || m.choices[m.cursor-1].Category != m.choices[m.cursor].Category {
-		m.cursor = m.cursor + m.catStats.Get(m.choices[m.cursor].Category) - 1
+		m.cursor = m.cursor + m.catStats.Amts[m.choices[m.cursor].Category] - 1
 	} else {
 		m.cursor--
 	}
@@ -515,7 +516,7 @@ or wrap-around to the beginning of the list of choices.
 */
 func (m *titleModel) setCursorWrapDown() {
 	if m.cursor >= len(m.choices)-1 || m.choices[m.cursor+1].Category != m.choices[m.cursor].Category {
-		m.cursor = m.cursor - m.catStats.Get(m.choices[m.cursor].Category) + 1
+		m.cursor = m.cursor - m.catStats.Amts[m.choices[m.cursor].Category] + 1
 	} else {
 		m.cursor++
 	}

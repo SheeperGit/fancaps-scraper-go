@@ -3,7 +3,6 @@ package scraper
 import (
 	"fmt"
 	"os"
-	"slices"
 	"sort"
 	"strings"
 
@@ -13,7 +12,7 @@ import (
 )
 
 /* Given a URL `searchURL`, return all titles found by FanCaps. */
-func GetTitles(searchURL string, catStats *types.CatStats, flags cli.CLIFlags) []*types.Title {
+func GetTitles(searchURL string, flags cli.CLIFlags) []*types.Title {
 	var titles []*types.Title
 
 	/* Base options for the scraper. */
@@ -40,7 +39,6 @@ func GetTitles(searchURL string, catStats *types.CatStats, flags cli.CLIFlags) [
 			Images:   &types.Images{},
 		}
 		titles = append(titles, title)
-		catStats.Increment(category)
 	})
 
 	/* Suppress scraper output. */
@@ -71,23 +69,9 @@ func GetTitles(searchURL string, catStats *types.CatStats, flags cli.CLIFlags) [
 		return strings.ToLower(titles[i].Name) < strings.ToLower(titles[j].Name)
 	})
 
-	/* Debug: Print category statistics and found titles. */
+	/* Debug: Print found titles. */
 	if flags.Debug {
-		snapshot := catStats.Snapshot()
-
-		var categories []types.Category
-		for cat := range snapshot {
-			categories = append(categories, cat)
-		}
-		slices.Sort(categories)
-
-		fmt.Println("CATEGORY STATISTICS:")
-		for _, cat := range categories {
-			fmt.Printf("\t%s Found: %d\n", cat.String(), snapshot[cat])
-		}
-		fmt.Println()
-
-		fmt.Println("\nFOUND TITLES:")
+		fmt.Println("\n\nFOUND TITLES:")
 		for _, t := range titles {
 			fmt.Println(t.Name, t.Link)
 		}

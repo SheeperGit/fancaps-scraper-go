@@ -1,7 +1,6 @@
 package types
 
 import (
-	"maps"
 	"sync"
 )
 
@@ -51,67 +50,33 @@ var CategoryName = map[Category]string{
 
 /* Thread-safe category amounts. */
 type CatStats struct {
-	amts map[Category]int // Amount of titles per category.
-	mu   sync.RWMutex     // Prevents bad writes from concurrent increments, while allowing multiple readers.
+	Amts map[Category]int // Amount of titles per category.
+	Max  int              // Highest amount of titles from all categories.
 }
 
-/* Returns a new category statistics struct. */
-func NewCatStats() *CatStats {
-	return &CatStats{
-		amts: make(map[Category]int, len(CategoryName)),
+/* Returns category statistics of titles `titles`. */
+func GetCatStats(titles []*Title) *CatStats {
+	cs := &CatStats{
+		Amts: make(map[Category]int, len(CategoryName)),
 	}
-}
 
-/* Increments category `cat` by 1. */
-func (cs *CatStats) Increment(cat Category) {
-	cs.mu.Lock()
-	defer cs.mu.Unlock()
-
-	cs.amts[cat]++
-}
-
-/* Returns the amount of titles found for category `cat`. */
-func (cs *CatStats) Get(cat Category) int {
-	cs.mu.RLock()
-	defer cs.mu.RUnlock()
-
-	return cs.amts[cat]
-}
-
-/* Returns a copy of the category amounts. */
-func (cs *CatStats) Snapshot() map[Category]int {
-	cs.mu.RLock()
-	defer cs.mu.RUnlock()
-
-	copy := make(map[Category]int, len(cs.amts))
-	maps.Copy(copy, cs.amts)
-
-	return copy
-}
-
-/* Returns the highest amount of titles from all categories. */
-func (cs *CatStats) Max() int {
-	cs.mu.RLock()
-	defer cs.mu.RUnlock()
-
-	max := 0
-	for _, v := range cs.amts {
-		if v > max {
-			max = v
+	/* Count up titles per category while also keeping track of the maximum. */
+	for _, title := range titles {
+		cat := title.Category
+		cs.Amts[cat]++
+		if cs.Amts[cat] > cs.Max {
+			cs.Max = cs.Amts[cat]
 		}
 	}
 
-	return max
+	return cs
 }
 
 /* Returns a list of categories with at least one found title. */
 func (cs *CatStats) UsedCategories() []Category {
-	cs.mu.RLock()
-	defer cs.mu.RUnlock()
-
 	var usedCats []Category
 	for cat := Category(0); cat < Category(len(CategoryName)); cat++ {
-		if cs.amts[cat] != 0 {
+		if cs.Amts[cat] != 0 {
 			usedCats = append(usedCats, cat)
 		}
 	}
