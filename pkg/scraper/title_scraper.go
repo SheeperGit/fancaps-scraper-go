@@ -20,12 +20,6 @@ and exits with code 1 otherwise.
 func GetTitles(searchURL string, flags cli.CLIFlags) []*types.Title {
 	titles := scrapeTitles(searchURL, flags)
 	for titles == nil {
-		/* Exit if the query was passed as a CLA. */
-		if flags.QueryCLAPassed {
-			fmt.Fprintf(os.Stderr, "No titles found for query '%s'.\n", flags.Query)
-			os.Exit(1)
-		}
-
 		fmt.Fprintf(os.Stderr, "Couldn't find any titles matching the query '%s'.\n", flags.Query)
 		fmt.Fprintf(os.Stderr, "Try again with a different query.\n\n")
 

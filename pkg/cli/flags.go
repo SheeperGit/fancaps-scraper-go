@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/gocolly/colly"
 	"github.com/spf13/cobra"
 	"sheeper.com/fancaps-scraper-go/pkg/types"
 	"sheeper.com/fancaps-scraper-go/pkg/ui/menu"
@@ -21,8 +22,6 @@ type CLIFlags struct {
 	OutputDir  string           // The directory to output images.
 	Async      bool             // If true, enable asynchronous network requests.
 	Debug      bool             // If true, print useful debugging messages.
-
-	QueryCLAPassed bool // If true, the query flag was used.
 }
 
 /* Example usage of fancaps-scraper-go. */
@@ -71,21 +70,6 @@ func ParseCLI() CLIFlags {
 			}
 			flags.OutputDir = outputDir
 
-			/* If `-q` not specified, prompt user for search query. */
-			for query == "" {
-				query = prompt.PromptUser("Enter Search Query: ", prompt.SearchHelpPrompt)
-				if query == "" {
-					fmt.Fprintln(os.Stderr, "CLI Error: Search query cannot be empty.")
-					cmd.Usage()
-					os.Exit(1)
-				}
-			}
-
-			flags.Query = query
-			flags.Async = async
-			flags.Debug = debug
-			flags.QueryCLAPassed = cmd.Flags().Changed("query")
-
 			/* Category Parsing. */
 			if categories != "" {
 				sanitizedInput := strings.ToLower(categories)
@@ -131,6 +115,27 @@ func ParseCLI() CLIFlags {
 
 			/* Sort according to Category enum order. */
 			slices.Sort(flags.Categories)
+
+			/* If `-q` was specified, exit if no titles exist for the query. */
+			searchURL := BuildQueryURL(query, flags.Categories)
+			if cmd.Flags().Changed("query") && !titleExists(searchURL, flags) {
+				fmt.Fprintf(os.Stderr, "No titles found for query '%s'.\n", query)
+				os.Exit(1)
+			}
+
+			/* If `-q` not specified, prompt user for search query. */
+			for query == "" {
+				query = prompt.PromptUser("Enter Search Query: ", prompt.SearchHelpPrompt)
+				if query == "" {
+					fmt.Fprintln(os.Stderr, "CLI Error: Search query cannot be empty.")
+					cmd.Usage()
+					os.Exit(1)
+				}
+			}
+
+			flags.Query = query
+			flags.Async = async
+			flags.Debug = debug
 		},
 	}
 
@@ -197,4 +202,37 @@ func ParentDirsExist(dirPath string) bool {
 	}
 
 	return info.IsDir()
+}
+
+/* Returns true, if a title exists in the URL `searchURL`, and returns false otherwise. */
+func titleExists(searchURL string, flags CLIFlags) bool {
+	titleExists := false
+
+	/* Base options for the scraper. */
+	scraperOpts := []func(*colly.Collector){
+		colly.AllowedDomains("fancaps.net"),
+	}
+
+	/* Enable asynchronous mode. */
+	if flags.Async {
+		scraperOpts = append(scraperOpts, colly.Async(true))
+	}
+
+	/* Create a Collector for FanCaps. */
+	c := colly.NewCollector(scraperOpts...)
+
+	/* At least one title was found. */
+	c.OnHTML("h4 > a", func(e *colly.HTMLElement) {
+		titleExists = true
+	})
+
+	/* Start the collector. */
+	c.Visit(searchURL)
+
+	/* Wait until all asynchronous requests are complete. */
+	if flags.Async {
+		c.Wait()
+	}
+
+	return titleExists
 }
