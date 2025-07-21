@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -17,6 +18,7 @@ import (
 type CLIFlags struct {
 	Query      string           // Search query to scrape from.
 	Categories []types.Category // Selected categories to search using `Query`.
+	OutputDir  string           // The directory to output images.
 	Async      bool             // If true, enable asynchronous network requests.
 	Debug      bool             // If true, print useful debugging messages.
 
@@ -40,6 +42,8 @@ const exampleUsage = `
   # Search for "Friends" tv series titles only, with asynchronous network requests explicitly disabled.
   fancaps-scraper -q Friends --categories tv --async=false`
 
+var defaultOutputDir = filepath.Join(".", "output") // Default output directory.
+
 /*
 Parse CLI flags.
 Always returns non-empty Query.
@@ -49,6 +53,7 @@ func ParseCLI() CLIFlags {
 		flags      CLIFlags
 		query      string
 		categories string
+		outputDir  string
 		async      bool
 		debug      bool
 	)
@@ -58,6 +63,14 @@ func ParseCLI() CLIFlags {
 		Short:   "Scrape images from fancaps.net using a CLI interface",
 		Example: exampleUsage,
 		Run: func(cmd *cobra.Command, args []string) {
+			/* Check that the parent directories exist. */
+			if !ParentDirsExist(outputDir) {
+				fmt.Fprintf(os.Stderr, "ParseCLI error: Couldn't find parent directories of '%s'\n", outputDir)
+				fmt.Fprintf(os.Stderr, "Make sure the parent directories exists.\n")
+				os.Exit(1)
+			}
+			flags.OutputDir = outputDir
+
 			/* If `-q` not specified, prompt user for search query. */
 			for query == "" {
 				query = prompt.PromptUser("Enter Search Query: ", prompt.SearchHelpPrompt)
@@ -124,6 +137,7 @@ func ParseCLI() CLIFlags {
 	/* Flag Definitions. */
 	rootCmd.Flags().StringVarP(&query, "query", "q", "", "Search query term")
 	rootCmd.Flags().StringVarP(&categories, "categories", "c", "", "Categories to search. Format: [anime,tv,movies|all] (comma-separated)")
+	rootCmd.Flags().StringVarP(&outputDir, "output-dir", "o", defaultOutputDir, "Output directory for images. (Parent directories must exist)")
 	rootCmd.Flags().BoolVar(&async, "async", true, "Enable asynchronous requests")
 	rootCmd.Flags().BoolVar(&debug, "debug", false, "Enable debug mode")
 
@@ -164,4 +178,23 @@ func BuildQueryURL(query string, categories []types.Category) string {
 
 	const baseURL = "https://fancaps.net/search.php"
 	return baseURL + "?" + params.Encode()
+}
+
+/*
+Returns true, if the parent directories of `dirPath` exist
+and returns false otherwise.
+*/
+func ParentDirsExist(dirPath string) bool {
+	parentDirs := filepath.Dir(dirPath)
+
+	info, err := os.Stat(parentDirs)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+		fmt.Fprintf(os.Stderr, "ParentDirsExist unexpected error: %v", err)
+		return false
+	}
+
+	return info.IsDir()
 }

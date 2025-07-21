@@ -19,10 +19,9 @@ import (
 )
 
 const (
-	defaultOutputDir  = "output" // Default output directory name.
-	defaultMaxWorkers = 3        // Default maximum amount of titles or episodes to download images from in parallel.
-	defaultMinDelay   = 1000     // Default minimum delay (in milliseconds) after every new image download request.
-	defaultRandDelay  = 5000     // Default maximum random delay (in milliseconds) after every new image download request.
+	defaultMaxWorkers = 3    // Default maximum amount of titles or episodes to download images from in parallel.
+	defaultMinDelay   = 1000 // Default minimum delay (in milliseconds) after every new image download request.
+	defaultRandDelay  = 5000 // Default maximum random delay (in milliseconds) after every new image download request.
 )
 
 var (
@@ -34,7 +33,7 @@ var (
 func DownloadImages(titles []*types.Title, flags cli.CLIFlags) {
 	sema := make(chan struct{}, defaultMaxWorkers)
 	var wg sync.WaitGroup
-	outputDir := createOutputDir(defaultOutputDir)
+	outputDir := createOutputDir(flags.OutputDir)
 
 	downloadImg := func(imgDir string, url string, titleImages, episodeImages *types.Images) {
 		sent := downloadImage(imgDir, url)
@@ -135,6 +134,8 @@ func jitterDelay(minDelay int, randDelay int) time.Duration {
 
 /*
 Returns the path to a newly created output directory at `dirname` to store the scraped images.
+This function checks whether the parent directories of `dirname` exist before creating the directory,
+if they do not, this will exit with code 1.
 
 Anime images will be saved to "./`dirname`/<Anime_Title_Name>/<Anime_Episode_Name>/".
 
@@ -143,18 +144,16 @@ TV Series images will be saved to "./`dirname`/<TV_Title_Name>/<TV_Episode_Name>
 Movie images will be saved to "./`dirname`/<Movie_Name>/".
 */
 func createOutputDir(dirname string) string {
-	// TODO: Allow user to specify path and check that it exists on flag creation.
-	if _, err := os.Stat(dirname); os.IsNotExist(err) {
-		dirname = defaultOutputDir
+	/* Check (for a second time) that the parent directories still exist. */
+	if !cli.ParentDirsExist(dirname) {
+		fmt.Fprintf(os.Stderr, "createOutputDir error: Couldn't find parent directories of '%s'\n", dirname)
+		fmt.Fprintf(os.Stderr, "Make sure the parent directories still exist at runtime.\n")
+		os.Exit(1)
 	}
 
-	outputPath := filepath.Join(".", dirname)
-	err := os.MkdirAll(outputPath, os.ModePerm)
-	if err != nil {
-		log.Fatal(err)
-	}
+	mkdirIfDNE(dirname)
 
-	return outputPath
+	return dirname
 }
 
 /*
@@ -262,12 +261,12 @@ func sanitizeDirname(dirname string) string {
 
 /*
 Creates directory `dirname`, if it does not already exist.
-If directory creation fails, prints an error and exits.
+If directory creation fails, prints an error and exits with code 1.
 */
 func mkdirIfDNE(dirname string) {
 	if _, err := os.Stat(dirname); os.IsNotExist(err) {
 		if err := os.Mkdir(dirname, os.ModePerm); err != nil {
-			log.Fatalf("Failed to create directory: %v", err)
+			log.Fatalf("mkdirIfDNE error: %v", err)
 		}
 	}
 }
