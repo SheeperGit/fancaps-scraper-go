@@ -81,14 +81,19 @@ type categoryModel struct {
 
 /* Initializes the category model. */
 func initialCategoryModel() categoryModel {
+	categories := []types.Category{}
+
+	/* List categories in enum order. */
+	for cat := types.Category(0); cat < types.Category(len(types.CategoryName)); cat++ {
+		categories = append(categories, cat)
+	}
+
 	return categoryModel{
 		keys:       categoryKeys,
 		help:       help.New(),
 		inputStyle: inputStyle,
-		choices: []types.Category{
-			types.CategoryMovie, types.CategoryTV, types.CategoryAnime,
-		},
-		selected: make(map[types.Category]struct{}),
+		choices:    categories,
+		selected:   make(map[types.Category]struct{}),
 	}
 }
 
