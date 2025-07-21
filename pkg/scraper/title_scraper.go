@@ -18,7 +18,7 @@ This function re-prompts the user for a search query if the query flag was passe
 and exits with code 1 otherwise.
 */
 func GetTitles(searchURL string, flags cli.CLIFlags) []*types.Title {
-	titles := FindTitles(searchURL, flags)
+	titles := scrapeTitles(searchURL, flags)
 	for titles == nil {
 		/* Exit if the query was passed as a CLA. */
 		if flags.QueryCLAPassed {
@@ -32,14 +32,14 @@ func GetTitles(searchURL string, flags cli.CLIFlags) []*types.Title {
 		/* Redo. */
 		flags = cli.ParseCLI()
 		searchURL = cli.BuildQueryURL(flags.Query, flags.Categories)
-		titles = FindTitles(searchURL, flags)
+		titles = scrapeTitles(searchURL, flags)
 	}
 
 	return titles
 }
 
 /* Given a URL `searchURL`, return all titles found by FanCaps. */
-func FindTitles(searchURL string, flags cli.CLIFlags) []*types.Title {
+func scrapeTitles(searchURL string, flags cli.CLIFlags) []*types.Title {
 	var titles []*types.Title
 
 	/* Base options for the scraper. */

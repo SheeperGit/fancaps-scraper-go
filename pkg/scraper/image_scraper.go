@@ -33,18 +33,14 @@ func GetImages(titles []*types.Title, flags cli.CLIFlags) {
 	for _, title := range titles {
 		/* Handle movies seperately, since they have no episodes. */
 		if title.Category == types.CategoryMovie {
-			scrapeMovieImages := func(title *types.Title) {
-				GetTitleImages(title, flags)
-			}
-
 			if flags.Async {
 				wg.Add(1)
 				go func(t *types.Title) {
 					defer wg.Done()
-					scrapeMovieImages(title)
+					scrapeTitleImages(title, flags)
 				}(title)
 			} else {
-				scrapeMovieImages(title)
+				scrapeTitleImages(title, flags)
 			}
 			continue // Go to the next title.
 		}
@@ -52,10 +48,10 @@ func GetImages(titles []*types.Title, flags cli.CLIFlags) {
 		/* For each episode... */
 		for _, episode := range title.Episodes {
 			/* Get the episode's images. */
-			scrapeImages := func(title *types.Title, episode *types.Episode) {
+			scrapeEpisodeImgs := func(title *types.Title, episode *types.Episode) {
 				switch title.Category {
 				case types.CategoryAnime, types.CategoryTV:
-					GetEpisodeImages(episode, title, flags)
+					scrapeEpisodeImages(episode, title, flags)
 				default:
 					fmt.Fprintf(os.Stderr, "Unknown Category: %s (%s) -> [%s]\n", title.Name, title.Link, title.Category)
 				}
@@ -65,10 +61,10 @@ func GetImages(titles []*types.Title, flags cli.CLIFlags) {
 				wg.Add(1)
 				go func(t *types.Title, e *types.Episode) {
 					defer wg.Done()
-					scrapeImages(t, e)
+					scrapeEpisodeImgs(t, e)
 				}(title, episode)
 			} else {
-				scrapeImages(title, episode)
+				scrapeEpisodeImgs(title, episode)
 			}
 		}
 	}
@@ -104,7 +100,7 @@ Intended to be used only alongside titles with *NO* episodes. (e.g., Movies)
 See `GetEpisodeImages()` for more details on how to handle image collection for titles
 with episodes.
 */
-func GetTitleImages(title *types.Title, flags cli.CLIFlags) {
+func scrapeTitleImages(title *types.Title, flags cli.CLIFlags) {
 	/* Base options for the scraper. */
 	scraperOpts := []func(*colly.Collector){
 		colly.AllowedDomains("fancaps.net"),
@@ -169,7 +165,7 @@ Intended to be used only alongside titles with episodes. (e.g., Anime, TV Series
 be left alone. This is intentional, as only Movie titles will directly store all
 of their URLs in the Title struct. See `GetTitleImages()` for more details.
 */
-func GetEpisodeImages(episode *types.Episode, title *types.Title, flags cli.CLIFlags) {
+func scrapeEpisodeImages(episode *types.Episode, title *types.Title, flags cli.CLIFlags) {
 	/* Base options for the scraper. */
 	scraperOpts := []func(*colly.Collector){
 		colly.AllowedDomains("fancaps.net"),

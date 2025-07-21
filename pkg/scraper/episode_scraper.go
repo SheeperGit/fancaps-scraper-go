@@ -28,9 +28,9 @@ func GetEpisodes(titles []*types.Title, flags cli.CLIFlags) []*types.Title {
 		scrapeEpisodes := func(t *types.Title) {
 			switch t.Category {
 			case types.CategoryAnime:
-				t.Episodes = GetAnimeEpisodes(t, flags)
+				t.Episodes = scrapeAnimeEpisodes(t, flags)
 			case types.CategoryTV:
-				t.Episodes = GetTVEpisodes(t, flags)
+				t.Episodes = scrapeTVEpisodes(t, flags)
 			case types.CategoryMovie:
 				// Do nothing
 			default:
@@ -69,7 +69,7 @@ func GetEpisodes(titles []*types.Title, flags cli.CLIFlags) []*types.Title {
 }
 
 /* Given a TV series title `title`, return its list of episodes. */
-func GetTVEpisodes(title *types.Title, flags cli.CLIFlags) []*types.Episode {
+func scrapeTVEpisodes(title *types.Title, flags cli.CLIFlags) []*types.Episode {
 	var episodes []*types.Episode
 
 	/* Base options for the scraper. */
@@ -126,7 +126,7 @@ func GetTVEpisodes(title *types.Title, flags cli.CLIFlags) []*types.Episode {
 }
 
 /* Given an Anime title `title`, return its list of episodes. */
-func GetAnimeEpisodes(title *types.Title, flags cli.CLIFlags) []*types.Episode {
+func scrapeAnimeEpisodes(title *types.Title, flags cli.CLIFlags) []*types.Episode {
 	var episodes []*types.Episode
 
 	/* Base options for the scraper. */

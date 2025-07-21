@@ -36,8 +36,8 @@ func DownloadImages(titles []*types.Title, flags cli.CLIFlags) {
 	var wg sync.WaitGroup
 	outputDir := createOutputDir(defaultOutputDir)
 
-	downloadImage := func(imgDir string, url string, titleImages, episodeImages *types.Images) {
-		sent := saveImage(imgDir, url)
+	downloadImg := func(imgDir string, url string, titleImages, episodeImages *types.Images) {
+		sent := downloadImage(imgDir, url)
 
 		if episodeImages != nil {
 			episodeImages.IncrementAmtProcessed()
@@ -52,7 +52,7 @@ func DownloadImages(titles []*types.Title, flags cli.CLIFlags) {
 		}
 	}
 
-	downloadImageAsync := func(imgDir, url string, titleImages, episodeImages *types.Images) {
+	downloadImgAsync := func(imgDir, url string, titleImages, episodeImages *types.Images) {
 		wg.Add(1)
 		sema <- struct{}{}
 		go func(url string) {
@@ -71,7 +71,7 @@ func DownloadImages(titles []*types.Title, flags cli.CLIFlags) {
 
 			defer wg.Done()
 			defer func() { <-sema }()
-			downloadImage(imgDir, url, titleImages, episodeImages)
+			downloadImg(imgDir, url, titleImages, episodeImages)
 		}(url)
 	}
 
@@ -86,9 +86,9 @@ func DownloadImages(titles []*types.Title, flags cli.CLIFlags) {
 			URLs := title.Images.GetImages()
 			for _, url := range URLs {
 				if flags.Async {
-					downloadImageAsync(titleDir, url, title.Images, nil)
+					downloadImgAsync(titleDir, url, title.Images, nil)
 				} else {
-					downloadImage(titleDir, url, title.Images, nil)
+					downloadImg(titleDir, url, title.Images, nil)
 				}
 			}
 
@@ -102,9 +102,9 @@ func DownloadImages(titles []*types.Title, flags cli.CLIFlags) {
 			URLs := episode.Images.GetImages()
 			for _, url := range URLs {
 				if flags.Async {
-					downloadImageAsync(imgDir, url, title.Images, episode.Images)
+					downloadImgAsync(imgDir, url, title.Images, episode.Images)
 				} else {
-					downloadImage(imgDir, url, title.Images, episode.Images)
+					downloadImg(imgDir, url, title.Images, episode.Images)
 				}
 			}
 		}
@@ -186,14 +186,14 @@ func createEpisodeDir(titleDir string, episodeName string) string {
 }
 
 /*
-Saves the image found at `url` to the directory `imgDir`,
+Downloads the image found at `url` to the directory `imgDir`,
 and returns whether the request to `url` was made.
 
 Although not strictly enforced, `imgDir` is expected to refer to an "Episode directory"
 for Anime and TV Series titles or a "Title directory" for Movie titles.
 Prints errors for locating the image, file creation, or copying content to a file, if encountered.
 */
-func saveImage(imgDir string, url string) bool {
+func downloadImage(imgDir string, url string) bool {
 	imgFilename := path.Base(url)
 	imgPath := filepath.Join(imgDir, imgFilename)
 	sent := false
