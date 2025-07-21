@@ -19,9 +19,11 @@ type CLIFlags struct {
 	Categories []types.Category // Selected categories to search using `Query`.
 	Async      bool             // If true, enable asynchronous network requests.
 	Debug      bool             // If true, print useful debugging messages.
+
+	QueryCLAPassed bool // If true, the query flag was used.
 }
 
-/* Example usage of fancaps-scraper. */
+/* Example usage of fancaps-scraper-go. */
 const exampleUsage = `
   # Show this message and exit.
   fancaps-scraper --help
@@ -69,6 +71,7 @@ func ParseCLI() CLIFlags {
 			flags.Query = query
 			flags.Async = async
 			flags.Debug = debug
+			flags.QueryCLAPassed = cmd.Flags().Changed("query")
 
 			/* Category Parsing. */
 			if categories != "" {

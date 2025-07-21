@@ -11,8 +11,35 @@ import (
 	"sheeper.com/fancaps-scraper-go/pkg/types"
 )
 
-/* Given a URL `searchURL`, return all titles found by FanCaps. */
+/*
+Returns a non-empty list of titles found through the URL `searchURL`.
+
+This function re-prompts the user for a search query if the query flag was passed
+and exits with code 1 otherwise.
+*/
 func GetTitles(searchURL string, flags cli.CLIFlags) []*types.Title {
+	titles := FindTitles(searchURL, flags)
+	for titles == nil {
+		/* Exit if the query was passed as a CLA. */
+		if flags.QueryCLAPassed {
+			fmt.Fprintf(os.Stderr, "No titles found for query '%s'.\n", flags.Query)
+			os.Exit(1)
+		}
+
+		fmt.Fprintf(os.Stderr, "Couldn't find any titles matching the query '%s'.\n", flags.Query)
+		fmt.Fprintf(os.Stderr, "Try again with a different query.\n\n")
+
+		/* Redo. */
+		flags = cli.ParseCLI()
+		searchURL = cli.BuildQueryURL(flags.Query, flags.Categories)
+		titles = FindTitles(searchURL, flags)
+	}
+
+	return titles
+}
+
+/* Given a URL `searchURL`, return all titles found by FanCaps. */
+func FindTitles(searchURL string, flags cli.CLIFlags) []*types.Title {
 	var titles []*types.Title
 
 	/* Base options for the scraper. */
@@ -45,7 +72,7 @@ func GetTitles(searchURL string, flags cli.CLIFlags) []*types.Title {
 	if flags.Debug {
 		/* Before making a request, print "Visiting: <URL>" */
 		c.OnRequest(func(req *colly.Request) {
-			fmt.Printf("SEARCH QUERY URL: %s\n\n", req.URL.String())
+			fmt.Printf("SEARCH QUERY URL: %s\n", req.URL.String())
 		})
 	}
 
@@ -75,7 +102,7 @@ func GetTitles(searchURL string, flags cli.CLIFlags) []*types.Title {
 		for _, t := range titles {
 			fmt.Println(t.Name, t.Link)
 		}
-		fmt.Println()
+		fmt.Printf("\n\n")
 	}
 
 	return titles
