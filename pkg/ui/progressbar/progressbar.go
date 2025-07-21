@@ -3,6 +3,7 @@ package progressbar
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -58,7 +59,8 @@ func ShowProgress(titles []*types.Title) {
 			processed := episode.Images.GetAmtProcessed()
 			total := episode.Images.GetImgCount()
 
-			leftText := getLeftText(episode.Name, episodeSpacing)
+			baseEpisodeName := getBaseEpisodeName(episode)
+			leftText := getLeftText(baseEpisodeName, episodeSpacing)
 			rightText := getRightText(processed, total)
 
 			line := formatLine(leftText, rightText, termWidth)
@@ -119,4 +121,22 @@ func createProgressBar(amtProcessed uint32, total uint32) string {
 		strings.Repeat(saucer, completed) +
 		strings.Repeat(saucerPadding, remaining) +
 		"]"
+}
+
+/*
+Returns the base episode name of episode `episode`.
+If the base name is unable to be extracted for whatever reason,
+the original name is returned.
+
+For example, "Episode 2 of Neon Genesis Evangelion" -> "Episode 2"
+*/
+func getBaseEpisodeName(episode *types.Episode) string {
+	re := regexp.MustCompile(`^(.*?)\s+of\b`)
+
+	matches := re.FindStringSubmatch(episode.Name)
+	if len(matches) > 1 {
+		return matches[1]
+	}
+
+	return episode.Name
 }
