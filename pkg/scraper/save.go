@@ -29,13 +29,16 @@ func DownloadImages(titles []*types.Title, flags cli.CLIFlags) {
 			return
 		}
 
+		/* Initial delay. */
+		jitterDelay(flags.MinDelay/2, flags.RandDelay/2)
+
 		sent := downloadImage(imgDir, url)
 
 		progressbar.UpdateProgressDisplay(titles, titleImages, episodeImages)
 
-		/* Only delay the next image request if one was sent in the first place. */
+		/* Post delay. Only delay the next image request, if one was sent in the first place. */
 		if sent {
-			jitterDelay(flags.MinDelay, flags.RandDelay)
+			jitterDelay(flags.MinDelay/2, flags.RandDelay/2)
 		}
 	}
 
