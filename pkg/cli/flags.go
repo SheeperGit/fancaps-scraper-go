@@ -44,7 +44,7 @@ const (
   # Search for "Friends" tv series titles only, with asynchronous network requests explicitly disabled.
   fancaps-scraper -q Friends --categories tv --async=false`
 
-	defaultParallelDownloads uint8  = 3    // Default maximum amount of titles or episodes to download images from in parallel.
+	defaultParallelDownloads uint8  = 10   // Default maximum amount of titles or episodes to download images from in parallel.
 	defaultMinDelay          uint32 = 1000 // Default minimum delay (in milliseconds) after every new image download request.
 	defaultRandDelay         uint32 = 5000 // Default maximum random delay (in milliseconds) after every new image download request.
 )
