@@ -3,3 +3,6 @@ fancaps-scraper-go
 
 # Default output directory
 output/
+
+# Error logs
+fsg_errors_*.txt

@@ -18,6 +18,40 @@ import (
 	"sheeper.com/fancaps-scraper-go/pkg/ui/progressbar"
 )
 
+var (
+	logFilename string    // Filename of the log file. Contains errors of varying severity.
+	setLogFile  sync.Once // Sets the name of the log file.
+)
+
+/* Enum for error severity. */
+type errSeverity int
+
+const (
+	ERR_WARNING errSeverity = iota
+	ERR_ERROR
+)
+
+/* Convert a category enumeration to its corresponding string representation. */
+func (es errSeverity) String() string {
+	return severityName[es]
+}
+
+var severityName = map[errSeverity]string{
+	ERR_WARNING: "WARNING", // Non-critical error severity.
+	ERR_ERROR:   "ERROR",   // Critical error severity.
+}
+
+/* Maximum length string of a severity error. */
+var maxSeverityLen = func() int {
+	max := 0
+	for _, name := range severityName {
+		if len(name) > max {
+			max = len(name)
+		}
+	}
+	return max
+}()
+
 /* Download images from titles `titles`. */
 func DownloadImages(titles []*types.Title, flags cli.CLIFlags) {
 	var wg sync.WaitGroup
@@ -184,16 +218,16 @@ func downloadImage(imgDir string, url string) bool {
 
 	/* If file already exists, don't overwrite and print an error. */
 	if _, err := os.Stat(imgPath); err == nil {
-		// fmt.Fprintf(os.Stderr, "Skipping existing file: %s\n", imgPath)
+		logErrorf(ERR_WARNING, "Skipping existing file: %s", imgPath)
 		return sent
 	} else if !os.IsNotExist(err) {
-		// fmt.Fprintf(os.Stderr, "Failed to stat file (%s): %v\n", imgPath, err)
+		logErrorf(ERR_WARNING, "Failed to stat file (%s): %v", imgPath, err)
 		return sent
 	}
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		// fmt.Fprintf(os.Stderr, "Failed to create HTTP request: %v\n", err)
+		logErrorf(ERR_ERROR, "Failed to create HTTP request: %v", err)
 		return sent
 	}
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36")
@@ -203,24 +237,24 @@ func downloadImage(imgDir string, url string) bool {
 	res, err := client.Do(req)
 	sent = true
 	if err != nil {
-		// fmt.Fprintf(os.Stderr, "Failed to perform HTTP request: %v\n", err)
+		logErrorf(ERR_ERROR, "Failed to perform HTTP request: %v", err)
 		return sent
 	}
 	defer res.Body.Close()
 
-	if res.StatusCode == http.StatusTooManyRequests {
+	if res.StatusCode == http.StatusTooManyRequests || res.StatusCode == http.StatusForbidden {
 		fmt.Fprintln(os.Stderr, "You are being rate-limited. Try again later.")
-		fmt.Fprintln(os.Stderr, "Hint: Try setting `--max-download-threads` to a lower value.")
+		fmt.Fprintln(os.Stderr, "Hint: Try setting `--parallel-downloads` to a lower value.")
 		os.Exit(2)
 	} else if res.StatusCode != http.StatusOK {
-		// fmt.Fprintf(os.Stderr, "Bad status code: %d for URL: %s\n", res.StatusCode, url)
+		logErrorf(ERR_ERROR, "Bad status code: %d for URL: %s", res.StatusCode, url)
 		return sent
 	}
 
 	/* Open file to copy image contents to. */
 	file, err := os.Create(imgPath)
 	if err != nil {
-		// fmt.Fprintf(os.Stderr, "Failed to create file (%s): %v\n", imgPath, err)
+		logErrorf(ERR_ERROR, "Failed to create file (%s): %v", imgPath, err)
 		return sent
 	}
 	defer file.Close()
@@ -228,7 +262,7 @@ func downloadImage(imgDir string, url string) bool {
 	/* Copy the response body to the file. */
 	_, err = io.Copy(file, res.Body)
 	if err != nil {
-		// fmt.Fprintf(os.Stderr, "Failed to copy image contents to file (%s): %v\n", imgPath, err)
+		logErrorf(ERR_ERROR, "Failed to copy image contents to file (%s): %v", imgPath, err)
 		return sent
 	}
 
@@ -254,6 +288,29 @@ func mkdirIfDNE(dirname string) {
 			log.Fatalf("mkdirIfDNE error: %v", err)
 		}
 	}
+}
+
+/*
+Appends errors to a log file, as defined by its severity `severity`, format `format` and its
+arguments `args`. Errors are timestamped with nanosecond precision.
+*/
+func logErrorf(severity errSeverity, format string, args ...any) {
+	setLogFile.Do(func() {
+		fileTimestamp := time.Now().Format("2006-01-02_15-04-05.000000000") // Nanosecond precision.
+		logFilename = fmt.Sprintf("fsg_errors_%s.txt", fileTimestamp)
+	})
+
+	f, err := os.OpenFile(logFilename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to open error log: %v\n", err)
+		os.Exit(1)
+	}
+	defer f.Close()
+
+	errTimestamp := time.Now().Format("2006-01-02 15:04:05.000000000")          // Nanosecond precision.
+	sev := fmt.Sprintf("%-*s", maxSeverityLen+2, fmt.Sprintf("[%s]", severity)) // Left-align severity error text.
+	errLine := fmt.Sprintf("%s (%s) %s\n", sev, errTimestamp, fmt.Sprintf(format, args...))
+	f.WriteString(errLine)
 }
 
 /*
