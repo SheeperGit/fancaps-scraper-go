@@ -17,15 +17,16 @@ import (
 
 /* Available CLI Flags. */
 type CLIFlags struct {
-	Query      string           // Search query to scrape from.
-	Categories []types.Category // Selected categories to search using `Query`.
-	OutputDir  string           // The directory to output images.
-	Async      bool             // If true, enable asynchronous network requests.
-	Debug      bool             // If true, print useful debugging messages.
+	Query             string           // Search query to scrape from.
+	Categories        []types.Category // Selected categories to search using `Query`.
+	OutputDir         string           // The directory to output images.
+	ParallelDownloads uint8            // Maximum amount of image downloads to make in parallel.
+	Async             bool             // If true, enable asynchronous network requests.
+	Debug             bool             // If true, print useful debugging messages.
 }
 
-/* Example usage of fancaps-scraper-go. */
-const exampleUsage = `
+const (
+	exampleUsage = `
   # Show this message and exit.
   fancaps-scraper --help
 
@@ -41,6 +42,9 @@ const exampleUsage = `
   # Search for "Friends" tv series titles only, with asynchronous network requests explicitly disabled.
   fancaps-scraper -q Friends --categories tv --async=false`
 
+	defaultParallelDownloads = 3 // Default maximum amount of titles or episodes to download images from in parallel.
+)
+
 var defaultOutputDir = filepath.Join(".", "output") // Default output directory.
 
 /*
@@ -49,12 +53,13 @@ Always returns non-empty Query.
 */
 func ParseCLI() CLIFlags {
 	var (
-		flags      CLIFlags
-		query      string
-		categories string
-		outputDir  string
-		async      bool
-		debug      bool
+		flags             CLIFlags
+		query             string
+		categories        string
+		outputDir         string
+		parallelDownloads uint8
+		async             bool
+		debug             bool
 	)
 
 	rootCmd := &cobra.Command{
@@ -69,6 +74,12 @@ func ParseCLI() CLIFlags {
 				os.Exit(1)
 			}
 			flags.OutputDir = outputDir
+
+			if parallelDownloads == 0 {
+				fmt.Fprintf(os.Stderr, "ParseCLI error: Parallel downloads must be set stricly positive.\n")
+				os.Exit(1)
+			}
+			flags.ParallelDownloads = parallelDownloads
 
 			/* Category Parsing. */
 			if categories != "" {
@@ -143,6 +154,7 @@ func ParseCLI() CLIFlags {
 	rootCmd.Flags().StringVarP(&query, "query", "q", "", "Search query term")
 	rootCmd.Flags().StringVarP(&categories, "categories", "c", "", "Categories to search. Format: [anime,tv,movies|all] (comma-separated)")
 	rootCmd.Flags().StringVarP(&outputDir, "output-dir", "o", defaultOutputDir, "Output directory for images. (Parent directories must exist)")
+	rootCmd.Flags().Uint8VarP(&parallelDownloads, "parallel-downloads", "p", defaultParallelDownloads, "Maximum amount of image downloads to request in parallel.")
 	rootCmd.Flags().BoolVar(&async, "async", true, "Enable asynchronous requests")
 	rootCmd.Flags().BoolVar(&debug, "debug", false, "Enable debug mode")
 

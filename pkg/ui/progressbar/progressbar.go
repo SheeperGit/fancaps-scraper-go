@@ -73,6 +73,21 @@ func ShowProgress(titles []*types.Title) {
 }
 
 /*
+Updates and shows the progress of titles `titles`.
+
+Always increments the progress of the title images `titleImages` (mandatory),
+and may also increment the progress of the episode images `episodeImages` if non-nil (optional).
+*/
+func UpdateProgressDisplay(titles []*types.Title, titleImages *types.Images, episodeImages *types.Images) {
+	if episodeImages != nil {
+		episodeImages.IncrementAmtProcessed()
+	}
+	titleImages.IncrementAmtProcessed()
+
+	ShowProgress(titles)
+}
+
+/*
 Formats a line to have `leftText`, `rightText` appear on the left and right sides
 of a window, respectively. Spacing is determined by the width `width`.
 */

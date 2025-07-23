@@ -19,31 +19,24 @@ import (
 )
 
 const (
-	defaultMaxWorkers = 3    // Default maximum amount of titles or episodes to download images from in parallel.
-	defaultMinDelay   = 1000 // Default minimum delay (in milliseconds) after every new image download request.
-	defaultRandDelay  = 5000 // Default maximum random delay (in milliseconds) after every new image download request.
-)
-
-var (
-	launchedWorkers = 0        // Number of image download workers launched.
-	launchMu        sync.Mutex // Prevents bad writes to `launchedWorkers`.
+	defaultMinDelay  = 1000 // Default minimum delay (in milliseconds) after every new image download request.
+	defaultRandDelay = 5000 // Default maximum random delay (in milliseconds) after every new image download request.
 )
 
 /* Download images from titles `titles`. */
 func DownloadImages(titles []*types.Title, flags cli.CLIFlags) {
-	sema := make(chan struct{}, defaultMaxWorkers)
 	var wg sync.WaitGroup
-	outputDir := createOutputDir(flags.OutputDir)
+	sema := make(chan struct{}, flags.ParallelDownloads)
 
 	downloadImg := func(imgDir string, url string, titleImages, episodeImages *types.Images) {
+		if imageExists(imgDir, url) {
+			progressbar.UpdateProgressDisplay(titles, titleImages, episodeImages)
+			return
+		}
+
 		sent := downloadImage(imgDir, url)
 
-		if episodeImages != nil {
-			episodeImages.IncrementAmtProcessed()
-		}
-		titleImages.IncrementAmtProcessed()
-
-		progressbar.ShowProgress(titles)
+		progressbar.UpdateProgressDisplay(titles, titleImages, episodeImages)
 
 		/* Only delay the next image request if one was sent in the first place. */
 		if sent {
@@ -55,26 +48,17 @@ func DownloadImages(titles []*types.Title, flags cli.CLIFlags) {
 		wg.Add(1)
 		sema <- struct{}{}
 		go func(url string) {
-			/* Update the number of launched workers. */
-			launchMu.Lock()
-			workerNum := launchedWorkers
-			if workerNum < defaultMaxWorkers {
-				launchedWorkers++
-			}
-			launchMu.Unlock()
-
-			/* Delay the workers slightly for the first time. */
-			if workerNum < defaultMaxWorkers {
-				jitterDelay(workerNum*500, 1000)
-			}
-
 			defer wg.Done()
 			defer func() { <-sema }()
+
 			downloadImg(imgDir, url, titleImages, episodeImages)
 		}(url)
 	}
 
+	outputDir := createOutputDir(flags.OutputDir)
+
 	fmt.Println(":: Showing progress...")
+	progressbar.ShowProgress(titles)
 
 	/* For each title... */
 	for _, title := range titles {
@@ -124,7 +108,10 @@ In this way, `randDelay` acts as the maximum amount of random delay possible
 */
 func jitterDelay(minDelay int, randDelay int) time.Duration {
 	d := time.Duration(minDelay) * time.Millisecond
-	r := time.Duration(rand.Intn(randDelay)) * time.Millisecond
+	r := time.Duration(0)
+	if randDelay > 0 {
+		r = time.Duration(rand.Intn(randDelay)) * time.Millisecond
+	}
 	jitter := d + r
 
 	time.Sleep(jitter)
@@ -269,4 +256,19 @@ func mkdirIfDNE(dirname string) {
 			log.Fatalf("mkdirIfDNE error: %v", err)
 		}
 	}
+}
+
+/*
+Returns true, if the image found at URL `url` exists in the directory `imgDir`
+and returns false otherwise.
+*/
+func imageExists(imgDir string, url string) bool {
+	imgFilename := path.Base(url)
+	imgPath := filepath.Join(imgDir, imgFilename)
+
+	if _, err := os.Stat(imgPath); err == nil {
+		return true
+	}
+
+	return false
 }
