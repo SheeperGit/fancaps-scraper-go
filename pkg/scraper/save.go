@@ -18,11 +18,6 @@ import (
 	"sheeper.com/fancaps-scraper-go/pkg/ui/progressbar"
 )
 
-const (
-	defaultMinDelay  = 1000 // Default minimum delay (in milliseconds) after every new image download request.
-	defaultRandDelay = 5000 // Default maximum random delay (in milliseconds) after every new image download request.
-)
-
 /* Download images from titles `titles`. */
 func DownloadImages(titles []*types.Title, flags cli.CLIFlags) {
 	var wg sync.WaitGroup
@@ -40,7 +35,7 @@ func DownloadImages(titles []*types.Title, flags cli.CLIFlags) {
 
 		/* Only delay the next image request if one was sent in the first place. */
 		if sent {
-			jitterDelay(defaultMinDelay, defaultRandDelay)
+			jitterDelay(flags.MinDelay, flags.RandDelay)
 		}
 	}
 
@@ -106,11 +101,11 @@ of milliseconds ranging from 0 milliseconds (no random delay) to
 In this way, `randDelay` acts as the maximum amount of random delay possible
 (in milliseconds).
 */
-func jitterDelay(minDelay int, randDelay int) time.Duration {
+func jitterDelay(minDelay uint32, randDelay uint32) time.Duration {
 	d := time.Duration(minDelay) * time.Millisecond
 	r := time.Duration(0)
 	if randDelay > 0 {
-		r = time.Duration(rand.Intn(randDelay)) * time.Millisecond
+		r = time.Duration(rand.Intn(int(randDelay))) * time.Millisecond
 	}
 	jitter := d + r
 
