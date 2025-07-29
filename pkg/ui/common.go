@@ -11,16 +11,14 @@ var (
 )
 
 /* Returns the longest title name from titles `titles` and its length. */
-func GetLongestTitle(titles []*types.Title) (string, int) {
+func GetLongestTitle(titles []*types.Title) string {
 	name := ""
-	length := 0
 
 	for _, title := range titles {
 		if len(title.Name) > len(name) {
 			name = title.Name
-			length = len(title.Name)
 		}
 	}
 
-	return name, length
+	return name
 }

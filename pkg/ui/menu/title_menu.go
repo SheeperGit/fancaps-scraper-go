@@ -105,9 +105,8 @@ type titleModel struct {
 
 /* Initializes the title model. */
 func initialTitleModel(titles []*types.Title) titleModel {
-	longestTitle, _ := ui.GetLongestTitle(titles)
 	contentPadding := getContentPadding(menuLineFormat)
-	contentWidth := lipgloss.Width(windowStyle.Render(longestTitle)) + contentPadding - windowStyle.GetHorizontalPadding()
+	contentWidth := lipgloss.Width(windowStyle.Render(ui.GetLongestTitle(titles))) + contentPadding - windowStyle.GetHorizontalPadding()
 
 	catStats := types.GetCatStats(titles)
 	tabs := catStats.UsedCategories()

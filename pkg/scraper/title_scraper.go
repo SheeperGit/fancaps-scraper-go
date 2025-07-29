@@ -58,7 +58,7 @@ func GetTitles(searchURLs []string, flags cli.CLIFlags) []*types.Title {
 
 	/* Debug: Print found titles. */
 	if flags.Debug {
-		_, maxTitleWidth := ui.GetLongestTitle(titles)
+		maxTitleWidth := len(ui.GetLongestTitle(titles))
 
 		fmt.Println("\n\nFOUND TITLES:")
 		for _, t := range titles {
