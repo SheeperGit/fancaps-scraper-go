@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"sheeper.com/fancaps-scraper-go/pkg/types"
+	"sheeper.com/fancaps-scraper-go/pkg/ui"
 )
 
 /* Title Menu KeyMap. */
@@ -104,8 +105,9 @@ type titleModel struct {
 
 /* Initializes the title model. */
 func initialTitleModel(titles []*types.Title) titleModel {
+	longestTitle, _ := ui.GetLongestTitle(titles)
 	contentPadding := getContentPadding(menuLineFormat)
-	contentWidth := lipgloss.Width(windowStyle.Render(getLongestTitle(titles))) + contentPadding - windowStyle.GetHorizontalPadding()
+	contentWidth := lipgloss.Width(windowStyle.Render(longestTitle)) + contentPadding - windowStyle.GetHorizontalPadding()
 
 	catStats := types.GetCatStats(titles)
 	tabs := catStats.UsedCategories()
@@ -203,7 +205,7 @@ func (m titleModel) View() string {
 
 	belowMenuContent := ""
 	if m.errMsg != "" {
-		belowMenuContent += "\n" + errMsgStyle.Render(m.errMsg) + "\n"
+		belowMenuContent += "\n" + ui.ErrStyle.Render(m.errMsg) + "\n"
 	}
 	belowMenuContent += "\n" + m.help.View(m.keys) + "\n"
 
@@ -274,7 +276,7 @@ func (m titleModel) getTitleMenuContent() string {
 
 			style := lipgloss.NewStyle()
 			if checked == 'x' {
-				style = style.Inherit(selectedStyle)
+				style = style.Inherit(ui.SuccessStyle)
 			}
 			if m.cursor == i {
 				style = style.Inherit(highlightStyle)
@@ -308,27 +310,6 @@ func getContentPadding(s string) int {
 	}
 
 	return count
-}
-
-/*
-Returns the longest title or episode name from titles `titles`.
-(Useful for determining the maximum width with which to render the Title Menu.)
-*/
-func getLongestTitle(titles []*types.Title) string {
-	maxWidth := ""
-
-	for _, title := range titles {
-		if len(title.Name) > len(maxWidth) {
-			maxWidth = title.Name
-		}
-		for _, episode := range title.Episodes {
-			if len(episode.Name) > len(maxWidth) {
-				maxWidth = episode.Name
-			}
-		}
-	}
-
-	return maxWidth
 }
 
 /* Returns true, if `t` is in `titles`, and returns false otherwise. */

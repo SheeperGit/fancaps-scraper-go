@@ -10,14 +10,16 @@ import (
 
 	"github.com/gocolly/colly"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 	"sheeper.com/fancaps-scraper-go/pkg/types"
+	"sheeper.com/fancaps-scraper-go/pkg/ui"
 	"sheeper.com/fancaps-scraper-go/pkg/ui/menu"
 	"sheeper.com/fancaps-scraper-go/pkg/ui/prompt"
 )
 
 /* Available CLI Flags. */
 type CLIFlags struct {
-	Query             string           // Search query to scrape from.
+	Queries           []string         // Search queries to scrape from.
 	Categories        []types.Category // Selected categories to search using `Query`.
 	OutputDir         string           // The directory to output images.
 	ParallelDownloads uint8            // Maximum amount of image downloads to make in parallel.
@@ -52,13 +54,15 @@ const (
 var defaultOutputDir = filepath.Join(".", "output") // Default output directory.
 
 /*
-Parse CLI flags.
-Always returns non-empty Query.
+Returns a list of search URLs `searchURLs` to scrape from and the parsed CLI flags.
+
+`flags.Queries` always contains a non-empty list of queries with at least one title
+associated with each query's search URL.
 */
-func ParseCLI() CLIFlags {
+func ParseCLI() ([]string, CLIFlags) {
 	var (
 		flags             CLIFlags
-		query             string
+		queries           []string
 		categories        string
 		outputDir         string
 		parallelDownloads uint8
@@ -68,6 +72,8 @@ func ParseCLI() CLIFlags {
 		debug             bool
 	)
 
+	var searchURLs []string
+
 	rootCmd := &cobra.Command{
 		Use:     "fancaps-scraper",
 		Short:   "Scrape images from fancaps.net using a CLI interface",
@@ -75,14 +81,15 @@ func ParseCLI() CLIFlags {
 		Run: func(cmd *cobra.Command, args []string) {
 			/* Check that the parent directories exist. */
 			if !ParentDirsExist(outputDir) {
-				fmt.Fprintf(os.Stderr, "ParseCLI error: Couldn't find parent directories of '%s'\n", outputDir)
-				fmt.Fprintf(os.Stderr, "Make sure the parent directories exists.\n")
+				fmt.Fprintf(os.Stderr, ui.ErrStyle.Render("couldn't find parent directories of '%s'")+"\n", outputDir)
+				fmt.Fprintln(os.Stderr, ui.ErrStyle.Render("make sure the parent directories exists."))
 				os.Exit(1)
 			}
 			flags.OutputDir = outputDir
 
+			/* Check that parallel downloads is non-zero. */
 			if parallelDownloads == 0 {
-				fmt.Fprintf(os.Stderr, "ParseCLI error: Parallel downloads must be set stricly positive.\n")
+				fmt.Fprintln(os.Stderr, ui.ErrStyle.Render("parallel downloads must be set stricly positive."))
 				os.Exit(1)
 			}
 			flags.ParallelDownloads = parallelDownloads
@@ -116,7 +123,7 @@ func ParseCLI() CLIFlags {
 						flags.Categories = append(flags.Categories, cat)
 						seen[cat] = true
 					} else if !ok {
-						fmt.Fprintf(os.Stderr, "CLI Error: Unknown category '%s'. Valid options are: anime, tv, movies, all\n", part)
+						fmt.Fprintf(os.Stderr, "unknown category '%s'. valid options are: anime, tv, movies, all\n", part)
 						os.Exit(1)
 					}
 				}
@@ -133,33 +140,67 @@ func ParseCLI() CLIFlags {
 			/* Sort according to Category enum order. */
 			slices.Sort(flags.Categories)
 
-			/* If `-q` was specified, exit if no titles exist for the query. */
-			searchURL := BuildQueryURL(query, flags.Categories)
-			if cmd.Flags().Changed("query") && !titleExists(searchURL, flags) {
-				fmt.Fprintf(os.Stderr, "No titles found for query '%s'.\n", query)
-				os.Exit(1)
-			}
+			flags.Async = async
 
-			/* If `-q` not specified, prompt user for search query. */
-			for query == "" {
-				query = prompt.PromptUser("Enter Search Query: ", prompt.SearchHelpPrompt)
-				if query == "" {
-					fmt.Fprintln(os.Stderr, "CLI Error: Search query cannot be empty.")
-					cmd.Usage()
-					os.Exit(1)
+			/* Query validation. */
+			if !cmd.Flags().Changed("query") {
+				/*
+					If `-q` not specified, prompt user for search query.
+					Validate search URLs incrementally.
+				*/
+				for len(queries) == 0 || prompt.YesNoPrompt("Enter another query? [y/N]: ", "") {
+					query := prompt.TextPrompt("Enter Search Query: ", prompt.QueryHelpPrompt)
+					if strings.TrimSpace(query) == "" {
+						fmt.Fprintln(os.Stderr, ui.ErrStyle.Render("search query cannot be empty.\n\n"))
+						continue
+					}
+
+					url := BuildQueryURL(query, flags.Categories)
+					if !titleExists(url, flags) {
+						fmt.Fprintf(os.Stderr, ui.ErrStyle.Render("no titles found for query '%s'.")+"\n\n\n", query)
+						continue
+					}
+					fmt.Printf(ui.SuccessStyle.Render("Found titles for query: '%s'")+"\n", query)
+					searchURLs = append(searchURLs, url)
+					queries = append(queries, query)
+				}
+				flags.Queries = queries
+			} else {
+				/* Validate search URLs all at once. */
+				for _, query := range queries {
+					if strings.TrimSpace(query) == "" {
+						fmt.Fprintln(os.Stderr, "search query cannot be empty.")
+						os.Exit(1)
+					}
+					url := BuildQueryURL(query, flags.Categories)
+					searchURLs = append(searchURLs, url)
+				}
+
+				var eg errgroup.Group
+				for i, url := range searchURLs {
+					i, url := i, url // https://golang.org/doc/faq#closures_and_goroutines
+					eg.Go(func() error {
+						if !titleExists(url, flags) {
+							return fmt.Errorf("no titles found for query '%s'", queries[i])
+						}
+						return nil
+					})
+
+					if err := eg.Wait(); err != nil {
+						fmt.Fprintln(os.Stderr, err)
+						os.Exit(1)
+					}
 				}
 			}
-			flags.Query = query
 
 			flags.MinDelay = minDelay
 			flags.RandDelay = randDelay
-			flags.Async = async
 			flags.Debug = debug
 		},
 	}
 
 	/* Flag Definitions. */
-	rootCmd.Flags().StringVarP(&query, "query", "q", "", "Search query term")
+	rootCmd.Flags().StringSliceVarP(&queries, "query", "q", []string{}, "Search query terms")
 	rootCmd.Flags().StringVarP(&categories, "categories", "c", "", "Categories to search. Format: [anime,tv,movies|all] (comma-separated)")
 	rootCmd.Flags().StringVarP(&outputDir, "output-dir", "o", defaultOutputDir, "Output directory for images. (Parent directories must exist)")
 	rootCmd.Flags().Uint8VarP(&parallelDownloads, "parallel-downloads", "p", defaultParallelDownloads, "Maximum amount of image downloads to request in parallel.")
@@ -180,7 +221,7 @@ func ParseCLI() CLIFlags {
 		os.Exit(1)
 	}
 
-	return flags
+	return searchURLs, flags
 }
 
 /*

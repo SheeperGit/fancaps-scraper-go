@@ -8,14 +8,11 @@ import (
 )
 
 func main() {
-	/* Parse flags. */
-	flags := cli.ParseCLI()
-
-	/* Get the URL to scrape based on category selections. */
-	searchURL := cli.BuildQueryURL(flags.Query, flags.Categories)
+	/* Get search URLs and parse flags. */
+	searchURLs, flags := cli.ParseCLI()
 
 	/* Get titles matching user query. */
-	titles := scraper.GetTitles(searchURL, flags)
+	titles := scraper.GetTitles(searchURLs, flags)
 
 	/* Allow the user to choose which titles to scrape from. */
 	selectedTitles := menu.LaunchTitleMenu(titles, flags.Categories, flags.Debug)

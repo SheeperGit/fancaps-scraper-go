@@ -41,7 +41,7 @@ require (
 	github.com/temoto/robotstxt v1.1.2 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	golang.org/x/net v0.40.0 // indirect
-	golang.org/x/sync v0.14.0 // indirect
+	golang.org/x/sync v0.14.0
 	golang.org/x/sys v0.34.0 // indirect
 	golang.org/x/term v0.33.0
 	golang.org/x/text v0.25.0 // indirect

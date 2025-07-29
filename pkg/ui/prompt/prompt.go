@@ -15,17 +15,17 @@ import (
 )
 
 /* Style for help tips. */
-var HelpStyle = lipgloss.NewStyle().
+var helpStyle = lipgloss.NewStyle().
 	Foreground(lipgloss.AdaptiveColor{
 		Light: "#B2B2B2",
 		Dark:  "#4A4A4A",
 	})
 
-/* Rendered help text for search query prompt. */
-var SearchHelpPrompt = strings.Join([]string{
-	HelpStyle.Render("Type the name of a movie, TV series, or anime you'd like to search for."),
-	HelpStyle.Render(`(e.g., "Predator", "Family Guy", "Hunter x Hunter", etc.)`),
-	HelpStyle.Render("Tip: You can enter just part of a title to search."),
+/* Rendered help text for a search query prompt. */
+var QueryHelpPrompt = strings.Join([]string{
+	helpStyle.Render("Type the name of a movie, TV series, or anime you'd like to search for."),
+	helpStyle.Render(`(e.g., "Predator", "Family Guy", "Hunter x Hunter", etc.)`),
+	helpStyle.Render("Tip: You can enter just part of a title to search."),
 }, "\n")
 
 /* Returns the rendered text for the episode selection of title `title`. */
@@ -33,11 +33,11 @@ func getSelectEpisodeHelp(title *types.Title) string {
 	max := strconv.Itoa(getLastEpisodeNumber(title.Episodes))
 
 	return strings.Join([]string{
-		HelpStyle.Render("Provide a range of episodes you'd like to scrape from " + "\"" + title.Name + "\""),
-		HelpStyle.Render("(e.g., 1-10, 1-3, 1-, " + "-" + max + ",  etc.)"),
-		HelpStyle.Render("Default: All. (1-" + max + ") [Leave empty for default]"),
-		HelpStyle.Render("Tip: You can provide multiple ranges at once! (Ranges may overlap.)"),
-		HelpStyle.Render("Example: \"1-5:2, 7, 6-10\" will scrape episodes 1, 3, 5, 6, 7, 8, 9, 10."),
+		helpStyle.Render("Provide a range of episodes you'd like to scrape from " + "\"" + title.Name + "\""),
+		helpStyle.Render("(e.g., 1-10, 1-3, 1-, " + "-" + max + ",  etc.)"),
+		helpStyle.Render("Default: All. (1-" + max + ") [Leave empty for default]"),
+		helpStyle.Render("Tip: You can provide multiple ranges at once! (Ranges may overlap.)"),
+		helpStyle.Render("Example: \"1-5:2, 7, 6-10\" will scrape episodes 1, 3, 5, 6, 7, 8, 9, 10."),
 	}, "\n")
 }
 
@@ -45,7 +45,7 @@ func getSelectEpisodeHelp(title *types.Title) string {
 Returns the text from the user prompt with prompt text `promptText`
 and renders a help description `helpText`.
 */
-func PromptUser(promptText, helpText string) string {
+func TextPrompt(promptText, helpText string) string {
 	fmt.Println(helpText)
 	fmt.Print(promptText)
 
@@ -61,6 +61,34 @@ func PromptUser(promptText, helpText string) string {
 }
 
 /*
+Returns true, if the user's reply to the prompt contains a "y"
+as the first character (case-insensitive) and returns false otherwise.
+*/
+func YesNoPrompt(promptText, helpText string) bool {
+	fmt.Println(helpText)
+	fmt.Print(promptText)
+
+	scanner := bufio.NewScanner(os.Stdin)
+	if scanner.Scan() {
+		reply := strings.TrimSpace(scanner.Text())
+		if len(reply) == 0 {
+			return false
+		}
+
+		reply = strings.ToLower(string(reply[0]))
+		if reply == "y" {
+			return true
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	return false
+}
+
+/*
 Returns a list of titles with episodes selected by the user from titles `titles`.
 If `debug` is enabled, print selected episodes and their titles.
 */
@@ -71,7 +99,7 @@ func SelectEpisodes(titles []*types.Title, debug bool) []*types.Title {
 		/* For each (non-movie) title, prompt the user for an episode range. */
 		for title.Category != types.CategoryMovie && err != nil {
 			selectEpisodePrompt := "Enter Episode Range for " + title.Name + ": "
-			userRange := PromptUser(selectEpisodePrompt, getSelectEpisodeHelp(title))
+			userRange := TextPrompt(selectEpisodePrompt, getSelectEpisodeHelp(title))
 			if userRange == "" { // Default to all episodes if user doesn't specify a range.
 				userRange = "1-" + strconv.Itoa(getLastEpisodeNumber(title.Episodes))
 			}

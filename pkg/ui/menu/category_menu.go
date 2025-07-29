@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"sheeper.com/fancaps-scraper-go/pkg/types"
+	"sheeper.com/fancaps-scraper-go/pkg/ui"
 )
 
 /* Category Menu KeyMap. */
@@ -161,7 +162,7 @@ func (m categoryModel) View() string {
 
 		style := lipgloss.NewStyle()
 		if checked == 'x' {
-			style = style.Inherit(selectedStyle)
+			style = style.Inherit(ui.SuccessStyle)
 		}
 		if m.cursor == i {
 			style = style.Inherit(highlightStyle)
@@ -171,7 +172,7 @@ func (m categoryModel) View() string {
 	}
 
 	if m.errMsg != "" {
-		s += "\n" + errMsgStyle.Render(m.errMsg) + "\n"
+		s += "\n" + ui.ErrStyle.Render(m.errMsg) + "\n"
 	}
 
 	s += "\n" + m.help.View(m.keys) + "\n"
