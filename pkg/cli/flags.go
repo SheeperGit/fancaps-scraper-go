@@ -157,7 +157,7 @@ func ParseCLI() ([]string, CLIFlags) {
 
 					url := BuildQueryURL(query, flags.Categories)
 					if !titleExists(url, flags) {
-						fmt.Fprintf(os.Stderr, ui.ErrStyle.Render("no titles found for query '%s'.")+"\n\n\n", query)
+						fmt.Fprintf(os.Stderr, ui.ErrStyle.Render("no titles found for query '%s'.")+"\n\n", query)
 						continue
 					}
 					fmt.Printf(ui.SuccessStyle.Render("Found titles for query: '%s'")+"\n", query)
@@ -271,28 +271,26 @@ func ParentDirsExist(dirPath string) bool {
 func titleExists(searchURL string, flags CLIFlags) bool {
 	titleExists := false
 
-	/* Base options for the scraper. */
 	scraperOpts := []func(*colly.Collector){
 		colly.AllowedDomains("fancaps.net"),
 	}
 
-	/* Enable asynchronous mode. */
 	if flags.Async {
 		scraperOpts = append(scraperOpts, colly.Async(true))
 	}
 
-	/* Create a Collector for FanCaps. */
 	c := colly.NewCollector(scraperOpts...)
 
-	/* At least one title was found. */
-	c.OnHTML("h4 > a", func(e *colly.HTMLElement) {
-		titleExists = true
+	c.OnHTML("div.single_post_content > table", func(e *colly.HTMLElement) {
+		/* Title found. */
+		e.ForEachWithBreak("h4 > a", func(_ int, _ *colly.HTMLElement) bool {
+			titleExists = true
+			return false // Stop searching for more titles.
+		})
 	})
 
-	/* Start the collector. */
 	c.Visit(searchURL)
 
-	/* Wait until all asynchronous requests are complete. */
 	if flags.Async {
 		c.Wait()
 	}

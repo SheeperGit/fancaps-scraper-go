@@ -62,7 +62,7 @@ func GetTitles(searchURLs []string, flags cli.CLIFlags) []*types.Title {
 
 		fmt.Println("\n\nFOUND TITLES:")
 		for _, t := range titles {
-			fmt.Printf("%-*s %s\n", maxTitleWidth, t.Name, t.Link)
+			fmt.Printf("%-*s -> %s\n", maxTitleWidth, t.Name, t.Link)
 		}
 		fmt.Printf("\n\n")
 	}
@@ -74,20 +74,10 @@ func GetTitles(searchURLs []string, flags cli.CLIFlags) []*types.Title {
 func scrapeTitles(searchURL string, flags cli.CLIFlags) []*types.Title {
 	var titles []*types.Title
 
-	/* Base options for the scraper. */
-	scraperOpts := []func(*colly.Collector){
-		colly.AllowedDomains("fancaps.net"),
-	}
-
-	/* Enable asynchronous mode. */
-	if flags.Async {
-		scraperOpts = append(scraperOpts, colly.Async(true))
-	}
-
-	/* Create a Collector for FanCaps. */
+	scraperOpts := GetScraperOpts(flags)
 	c := colly.NewCollector(scraperOpts...)
 
-	/* Extract the title's name and link. */
+	/* Extract title info. */
 	c.OnHTML("h4 > a", func(e *colly.HTMLElement) {
 		link := e.Request.AbsoluteURL(e.Attr("href"))
 		category := getCategory(link)
@@ -100,18 +90,14 @@ func scrapeTitles(searchURL string, flags cli.CLIFlags) []*types.Title {
 		titles = append(titles, title)
 	})
 
-	/* Suppress scraper output. */
 	if flags.Debug {
-		/* Before making a request, print "Visiting: <URL>" */
 		c.OnRequest(func(req *colly.Request) {
 			fmt.Printf("SEARCH QUERY URL: %s\n", req.URL.String())
 		})
 	}
 
-	/* Start the collector. */
 	c.Visit(searchURL)
 
-	/* Wait until all asynchronous requests are complete. */
 	if flags.Async {
 		c.Wait()
 	}

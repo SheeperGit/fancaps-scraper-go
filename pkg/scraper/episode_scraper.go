@@ -62,7 +62,7 @@ func GetEpisodes(titles []*types.Title, flags cli.CLIFlags) []*types.Title {
 				fmt.Printf("\t%s -> %s\n", episode.Name, episode.Link)
 			}
 		}
-		fmt.Printf("\n\n") // Make room for episode range user prompt.
+		fmt.Printf("\n\n")
 	}
 
 	return titles
@@ -72,20 +72,10 @@ func GetEpisodes(titles []*types.Title, flags cli.CLIFlags) []*types.Title {
 func scrapeTVEpisodes(title *types.Title, flags cli.CLIFlags) []*types.Episode {
 	var episodes []*types.Episode
 
-	/* Base options for the scraper. */
-	scraperOpts := []func(*colly.Collector){
-		colly.AllowedDomains("fancaps.net"),
-	}
-
-	/* Enable asynchronous mode. */
-	if flags.Async {
-		scraperOpts = append(scraperOpts, colly.Async(true))
-	}
-
-	/* Create a Collector for FanCaps. */
+	scraperOpts := GetScraperOpts(flags)
 	c := colly.NewCollector(scraperOpts...)
 
-	/* Extract the episode's name and link. (TV-only) */
+	/* Extract episode info. (TV-only) */
 	c.OnHTML("h3 > a[href]", func(e *colly.HTMLElement) {
 		link := e.Request.AbsoluteURL(e.Attr("href"))
 		episode := &types.Episode{
@@ -98,7 +88,7 @@ func scrapeTVEpisodes(title *types.Title, flags cli.CLIFlags) []*types.Episode {
 
 	/*
 		If there is a next page,
-		visit it to re-trigger episode name/link extraction. (TV-only)
+		visit it to re-trigger episode info extraction. (TV-only)
 	*/
 	c.OnHTML("ul.pager > li > a[href]", func(e *colly.HTMLElement) {
 		nextPageURL := e.Request.AbsoluteURL(e.Attr("href"))
@@ -107,17 +97,14 @@ func scrapeTVEpisodes(title *types.Title, flags cli.CLIFlags) []*types.Episode {
 		}
 	})
 
-	/* Suppress scraper output. */
 	if flags.Debug {
 		c.OnRequest(func(req *colly.Request) {
 			fmt.Println("Visiting TV Episode URL:", req.URL.String())
 		})
 	}
 
-	/* Start the collector on the title. */
 	c.Visit(title.Link)
 
-	/* Wait until all asynchronous requests are complete. */
 	if flags.Async {
 		c.Wait()
 	}
@@ -129,20 +116,10 @@ func scrapeTVEpisodes(title *types.Title, flags cli.CLIFlags) []*types.Episode {
 func scrapeAnimeEpisodes(title *types.Title, flags cli.CLIFlags) []*types.Episode {
 	var episodes []*types.Episode
 
-	/* Base options for the scraper. */
-	scraperOpts := []func(*colly.Collector){
-		colly.AllowedDomains("fancaps.net"),
-	}
-
-	/* Enable asynchronous mode. */
-	if flags.Async {
-		scraperOpts = append(scraperOpts, colly.Async(true))
-	}
-
-	/* Create a Collector for FanCaps. */
+	scraperOpts := GetScraperOpts(flags)
 	c := colly.NewCollector(scraperOpts...)
 
-	/* Extract the episode's name and link. (Anime-only) */
+	/* Extract episode info. (Anime-only) */
 	c.OnHTML("a[href] > h3", func(e *colly.HTMLElement) {
 		href, _ := e.DOM.Parent().Attr("href")
 		link := e.Request.AbsoluteURL(href)
@@ -156,24 +133,21 @@ func scrapeAnimeEpisodes(title *types.Title, flags cli.CLIFlags) []*types.Episod
 
 	/*
 		If there is a next page,
-		visit it to re-trigger episode name/link extraction. (Anime-only)
+		visit it to re-trigger episode info extraction. (Anime-only)
 	*/
 	c.OnHTML("a[title='Next Page']", func(e *colly.HTMLElement) {
 		nextPageURL := e.Request.AbsoluteURL(e.Attr("href"))
 		c.Visit(nextPageURL)
 	})
 
-	/* Suppress scraper output. */
 	if flags.Debug {
 		c.OnRequest(func(req *colly.Request) {
 			fmt.Println("Visiting Anime Episode URL:", req.URL.String())
 		})
 	}
 
-	/* Start the collector on the title. */
 	c.Visit(title.Link)
 
-	/* Wait until all asynchronous requests are complete. */
 	if flags.Async {
 		c.Wait()
 	}
