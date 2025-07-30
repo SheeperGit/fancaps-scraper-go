@@ -3,7 +3,9 @@ package scraper
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -12,6 +14,8 @@ import (
 	"sheeper.com/fancaps-scraper-go/pkg/types"
 	"sheeper.com/fancaps-scraper-go/pkg/ui"
 )
+
+var seasonRegex = regexp.MustCompile(` Season (\d+)`) // Extracts a title's season number.
 
 /*
 Returns a non-empty, unique, sorted list of titles found through the URLs `searchURLs`,
@@ -44,7 +48,10 @@ func GetTitles(searchURLs []string, flags cli.CLIFlags) []*types.Title {
 	}
 	wg.Wait()
 
-	/* Sort found titles by category, then alphabetically. (Case-insensitive) */
+	/*
+		Sort found titles. (Case-insensitive)
+		Precedence (Highest to Lowest): Category, Name + Season, Name.
+	*/
 	sort.Slice(titles, func(i, j int) bool {
 		catI := titles[i].Category
 		catJ := titles[j].Category
@@ -53,7 +60,24 @@ func GetTitles(searchURLs []string, flags cli.CLIFlags) []*types.Title {
 			return catI < catJ
 		}
 
-		return strings.ToLower(titles[i].Name) < strings.ToLower(titles[j].Name)
+		nameI := titles[i].Name
+		nameJ := titles[j].Name
+
+		baseNameI := strings.ToLower(seasonRegex.ReplaceAllString(nameI, ""))
+		baseNameJ := strings.ToLower(seasonRegex.ReplaceAllString(nameJ, ""))
+
+		if baseNameI != baseNameJ {
+			return baseNameI < baseNameJ
+		}
+
+		numI, seasonFoundI := getSeasonNumber(nameI)
+		numJ, seasonFoundJ := getSeasonNumber(nameJ)
+
+		if seasonFoundI && seasonFoundJ {
+			return numI < numJ
+		}
+
+		return baseNameI < baseNameJ
 	})
 
 	/* Debug: Print found titles. */
@@ -119,4 +143,19 @@ func getCategory(url string) types.Category {
 		os.Exit(1)
 		return -1
 	}
+}
+
+/*
+Returns the season number from the name `name`
+and whether a season number was found.
+*/
+func getSeasonNumber(name string) (int, bool) {
+	match := seasonRegex.FindStringSubmatch(name)
+	if match != nil {
+		if n, err := strconv.Atoi(match[1]); err == nil {
+			return n, true
+		}
+	}
+
+	return 0, false
 }

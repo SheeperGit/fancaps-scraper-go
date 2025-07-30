@@ -281,6 +281,7 @@ func titleExists(searchURL string, flags CLIFlags) bool {
 
 	c := colly.NewCollector(scraperOpts...)
 
+	/* Search the results of each category. */
 	c.OnHTML("div.single_post_content > table", func(e *colly.HTMLElement) {
 		/* Title found. */
 		e.ForEachWithBreak("h4 > a", func(_ int, _ *colly.HTMLElement) bool {
