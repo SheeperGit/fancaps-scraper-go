@@ -77,14 +77,14 @@ func GetImages(titles []*types.Title, flags cli.CLIFlags) {
 	if flags.Debug {
 		fmt.Println("\n\nFOUND IMAGES:")
 		for _, title := range titles {
-			fmt.Printf("%s [%s] -> %d images\n", title.Name, title.Category, title.Images.GetImgCount())
+			fmt.Printf("%s [%s] -> %d images\n", title.Name, title.Category, title.Images.Total())
 
 			if title.Category == types.CategoryMovie {
 				continue // Don't show movie episodes. They don't have any.
 			}
 
 			for _, episode := range title.Episodes {
-				fmt.Printf("\t%s -> %d images\n", episode.Name, episode.Images.GetImgCount())
+				fmt.Printf("\t%s -> %d images\n", episode.Name, episode.Images.Total())
 			}
 		}
 		fmt.Printf("\n\n")
@@ -117,7 +117,7 @@ func scrapeTitleImages(title *types.Title, flags cli.CLIFlags) {
 		imgURL := CategoryURLMap[title.Category] + file
 
 		title.Images.AddURL(imgURL)
-		title.Images.IncrementImgCount()
+		title.Images.IncrementTotal()
 
 		if flags.Debug {
 			fmt.Printf("%s [%s] image found! (%s)\n", title.Name, title.Category, imgURL)
@@ -169,8 +169,8 @@ func scrapeEpisodeImages(episode *types.Episode, title *types.Title, flags cli.C
 		imgURL := CategoryURLMap[title.Category] + file
 
 		episode.Images.AddURL(imgURL)
-		episode.Images.IncrementImgCount()
-		title.Images.IncrementImgCount()
+		episode.Images.IncrementTotal()
+		title.Images.IncrementTotal()
 
 		if flags.Debug {
 			fmt.Printf("%s - %s [%s] image found! (%s)\n", title.Name, episode.Name, title.Category, imgURL)

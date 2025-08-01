@@ -278,7 +278,7 @@ func (m titleModel) getTitleMenuContent() string {
 				style = style.Inherit(ui.SuccessStyle)
 			}
 			if m.cursor == i {
-				style = style.Inherit(highlightStyle)
+				style = style.Inherit(ui.HighlightStyle)
 			}
 
 			titleContent += style.Render(line) + "\n"

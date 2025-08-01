@@ -21,10 +21,7 @@ import (
 const menuLineFormat = "%c [%c] %s"
 
 /* Menu Styles. */
-var (
-	inputStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF75B7"))
-	highlightStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("212"))
-)
+var inputStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF75B7"))
 
 // /* Base/Default keybindings to be shown in the mini-help view. */
 // func (k baseKeyMap) ShortHelp() []key.Binding {

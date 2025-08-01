@@ -165,7 +165,7 @@ func (m categoryModel) View() string {
 			style = style.Inherit(ui.SuccessStyle)
 		}
 		if m.cursor == i {
-			style = style.Inherit(highlightStyle)
+			style = style.Inherit(ui.HighlightStyle)
 		}
 
 		s += style.Render(line) + "\n"

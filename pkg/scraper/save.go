@@ -59,6 +59,10 @@ func DownloadImages(titles []*types.Title, flags cli.CLIFlags) {
 
 	downloadImg := func(imgDir string, url string, titleImages, episodeImages *types.Images) {
 		if imageExists(imgDir, url) {
+			if episodeImages != nil {
+				episodeImages.IncrementSkipped()
+			}
+			titleImages.IncrementSkipped()
 			progressbar.UpdateProgressDisplay(titles, titleImages, episodeImages)
 			return
 		}
@@ -95,10 +99,11 @@ func DownloadImages(titles []*types.Title, flags cli.CLIFlags) {
 	/* For each title... */
 	for _, title := range titles {
 		titleDir := createTitleDir(outputDir, title.Name)
+		title.Start = time.Now()
 
 		/* Handle movies seperately, since they have no episodes. */
 		if title.Category == types.CategoryMovie {
-			URLs := title.Images.GetImages()
+			URLs := title.Images.URLs()
 			for _, url := range URLs {
 				if flags.Async {
 					downloadImgAsync(titleDir, url, title.Images, nil)
@@ -114,7 +119,8 @@ func DownloadImages(titles []*types.Title, flags cli.CLIFlags) {
 		for _, episode := range title.Episodes {
 			imgDir := createEpisodeDir(titleDir, episode.Name)
 
-			URLs := episode.Images.GetImages()
+			URLs := episode.Images.URLs()
+			episode.Start = time.Now()
 			for _, url := range URLs {
 				if flags.Async {
 					downloadImgAsync(imgDir, url, title.Images, episode.Images)
@@ -216,7 +222,7 @@ func downloadImage(imgDir string, url string) bool {
 	imgPath := filepath.Join(imgDir, imgFilename)
 	sent := false
 
-	/* If file already exists, don't overwrite and print an error. */
+	/* If file already exists, don't overwrite and log as a warning. */
 	if _, err := os.Stat(imgPath); err == nil {
 		logErrorf(ERR_WARNING, "Skipping existing file: %s", imgPath)
 		return sent
