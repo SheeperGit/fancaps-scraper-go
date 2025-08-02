@@ -46,7 +46,7 @@ var (
 func ShowProgress(titles []*types.Title) {
 	setOnce.Do(func() {
 		downloadStart = time.Now()
-		ratioWidth = 2*len(strconv.Itoa(int(types.TotalTotal()))) + 3
+		ratioWidth = 2*len(strconv.Itoa(int(types.ImgTotal()))) + 3
 	})
 
 	progressMu.Lock()
@@ -102,7 +102,7 @@ func ShowProgress(titles []*types.Title) {
 	}
 	totalProcessed := types.ProcessedTotal()
 	totalSkipped := types.SkippedTotal()
-	totalImgs := types.TotalTotal()
+	totalImgs := types.ImgTotal()
 
 	leftText := getLeftText("Total: ", totalSpacing)
 	rightText := getRightText(totalProcessed, totalSkipped, totalImgs, downloadStart)
