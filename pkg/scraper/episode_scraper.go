@@ -79,6 +79,7 @@ func scrapeTVEpisodes(title *types.Title, flags cli.CLIFlags) []*types.Episode {
 	c.OnHTML("h3 > a[href]", func(e *colly.HTMLElement) {
 		link := e.Request.AbsoluteURL(e.Attr("href"))
 		episode := &types.Episode{
+			Title:  title,
 			Name:   getEpisodeTitle(e.Text),
 			Link:   link,
 			Images: &types.Images{},
@@ -124,6 +125,7 @@ func scrapeAnimeEpisodes(title *types.Title, flags cli.CLIFlags) []*types.Episod
 		href, _ := e.DOM.Parent().Attr("href")
 		link := e.Request.AbsoluteURL(href)
 		episode := &types.Episode{
+			Title:  title,
 			Name:   getEpisodeTitle(e.Text) + " of " + title.Name, // Append title name (required for `getEpisodeByNumber()`)
 			Link:   link,
 			Images: &types.Images{},

@@ -5,37 +5,61 @@ import (
 )
 
 var (
-	imgsProcessed uint32 // Total number of processed images.
-	imgsSkipped   uint32 // Total number of skipped images.
-	imgsTotal     uint32 // Total number of images.
+	imgsDownloaded uint32 // Total number of downloaded images.
+	imgsSkipped    uint32 // Total number of skipped images.
+	imgsTotal      uint32 // Total number of images.
 )
 
 var (
-	processedMu sync.RWMutex // Prevents bad writes to `imgsProcessed`, while allowing multiple readers.
-	skippedMu   sync.RWMutex // Prevents bad writes to `imgsSkipped`, while allowing multiple readers.
-	totalMu     sync.RWMutex // Prevents bad writes to `imgsTotal`, while allowing multiple readers.
+	downloadMu sync.RWMutex // Prevents bad writes to the global downloaded image counter, while allowing multiple readers.
+	skipMu     sync.RWMutex // Prevents bad writes to the global skipped image counter, while allowing multiple readers.
+	totalMu    sync.RWMutex // Prevents bad writes to the global total image counter, while allowing multiple readers.
 )
 
 /* Returns the total number of processed images across all titles. */
-func ProcessedTotal() uint32 {
-	processedMu.RLock()
-	defer processedMu.RUnlock()
+func GlobalDownloadedImages() uint32 {
+	downloadMu.RLock()
+	defer downloadMu.RUnlock()
 
-	return imgsProcessed
+	return imgsDownloaded
 }
 
 /* Returns the total number of skipped images. */
-func SkippedTotal() uint32 {
-	skippedMu.RLock()
-	defer skippedMu.RUnlock()
+func GlobalSkippedImages() uint32 {
+	skipMu.RLock()
+	defer skipMu.RUnlock()
 
 	return imgsSkipped
 }
 
 /* Returns the total number of images. */
-func ImgTotal() uint32 {
+func GlobalTotalImages() uint32 {
 	totalMu.RLock()
 	defer totalMu.RUnlock()
 
 	return imgsTotal
+}
+
+/* Increments total downloaded image counter by 1. */
+func IncrementGlobalDownloadedCount() {
+	downloadMu.Lock()
+	defer downloadMu.Unlock()
+
+	imgsDownloaded++
+}
+
+/* Increments total skipped image counter by 1. */
+func IncrementGlobalSkippedCount() {
+	skipMu.Lock()
+	defer skipMu.Unlock()
+
+	imgsSkipped++
+}
+
+/* Increments total image counter by 1. */
+func IncrementGlobalImageCount() {
+	totalMu.Lock()
+	defer totalMu.Unlock()
+
+	imgsTotal++
 }

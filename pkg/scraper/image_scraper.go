@@ -117,7 +117,7 @@ func scrapeTitleImages(title *types.Title, flags cli.CLIFlags) {
 		imgURL := CategoryURLMap[title.Category] + file
 
 		title.Images.AddURL(imgURL)
-		title.Images.IncrementTotal()
+		title.IncrementImageTotal()
 
 		if flags.Debug {
 			fmt.Printf("%s [%s] image found! (%s)\n", title.Name, title.Category, imgURL)
@@ -169,8 +169,7 @@ func scrapeEpisodeImages(episode *types.Episode, title *types.Title, flags cli.C
 		imgURL := CategoryURLMap[title.Category] + file
 
 		episode.Images.AddURL(imgURL)
-		episode.Images.IncrementTotal()
-		title.Images.IncrementTotal()
+		episode.IncrementImageTotal()
 
 		if flags.Debug {
 			fmt.Printf("%s - %s [%s] image found! (%s)\n", title.Name, episode.Name, title.Category, imgURL)

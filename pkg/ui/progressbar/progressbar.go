@@ -46,7 +46,7 @@ var (
 func ShowProgress(titles []*types.Title) {
 	setOnce.Do(func() {
 		downloadStart = time.Now()
-		ratioWidth = 2*len(strconv.Itoa(int(types.ImgTotal()))) + 3
+		ratioWidth = 2*len(strconv.Itoa(int(types.GlobalTotalImages()))) + 3
 	})
 
 	progressMu.Lock()
@@ -67,14 +67,14 @@ func ShowProgress(titles []*types.Title) {
 	for _, title := range titles {
 		/* Render title progress, if not done. */
 		if !title.Images.Done {
-			processed := title.Images.Processed()
+			downloaded := title.Images.Downloaded()
 			skipped := title.Images.Skipped()
 			total := title.Images.Total()
 
 			leftText := getLeftText(title.Name, titleSpacing)
-			rightText := getRightText(processed, skipped, total, title.Start)
+			rightText := getRightText(downloaded, skipped, total, title.Start)
 
-			line := formatLine(leftText, rightText, processed, total, termWidth, title.Images, nil)
+			line := formatLine(leftText, rightText, downloaded, skipped, total, termWidth, title.Images, nil)
 			fmt.Printf("\r%s\n", line)
 		} else {
 			fmt.Println()
@@ -84,15 +84,15 @@ func ShowProgress(titles []*types.Title) {
 		for _, episode := range title.Episodes {
 			/* Render episode progress, if not done. */
 			if !episode.Images.Done {
-				processed := episode.Images.Processed()
+				downloaded := episode.Images.Downloaded()
 				skipped := episode.Images.Skipped()
 				total := episode.Images.Total()
 
 				baseEpisodeName := getBaseEpisodeName(episode)
 				leftText := getLeftText(baseEpisodeName, episodeSpacing)
-				rightText := getRightText(processed, skipped, total, episode.Start)
+				rightText := getRightText(downloaded, skipped, total, episode.Start)
 
-				line := formatLine(leftText, rightText, processed, total, termWidth, title.Images, episode.Images)
+				line := formatLine(leftText, rightText, downloaded, skipped, total, termWidth, title.Images, episode.Images)
 				fmt.Printf("\r%s\n", line)
 			} else {
 				fmt.Println()
@@ -100,14 +100,14 @@ func ShowProgress(titles []*types.Title) {
 			linesCount++
 		}
 	}
-	totalProcessed := types.ProcessedTotal()
-	totalSkipped := types.SkippedTotal()
-	totalImgs := types.ImgTotal()
+	totalDownloaded := types.GlobalDownloadedImages()
+	totalSkipped := types.GlobalSkippedImages()
+	totalImgs := types.GlobalTotalImages()
 
 	leftText := getLeftText("Total: ", totalSpacing)
-	rightText := getRightText(totalProcessed, totalSkipped, totalImgs, downloadStart)
+	rightText := getRightText(totalDownloaded, totalSkipped, totalImgs, downloadStart)
 
-	line := formatLine(leftText, rightText, totalProcessed, totalImgs, termWidth, nil, nil)
+	line := formatLine(leftText, rightText, totalDownloaded, totalSkipped, totalImgs, termWidth, nil, nil)
 	fmt.Printf("\r\n%s\n", line)
 	linesCount = linesCount + 2
 
@@ -115,26 +115,22 @@ func ShowProgress(titles []*types.Title) {
 }
 
 /*
-Updates and shows the progress of titles `titles`.
-
-Always increments the progress of the title images `titleImages` (mandatory),
-and may also increment the progress of the episode images `episodeImages` if non-nil (optional).
+Increments the progress of an image container using incrementer function `incFunc`,
+and shows the progress of titles `titles`.
 */
-func UpdateProgressDisplay(titles []*types.Title, titleImages *types.Images, episodeImages *types.Images) {
-	if episodeImages != nil {
-		episodeImages.IncrementProcessed()
-	}
-	titleImages.IncrementProcessed()
-
+func UpdateProgressDisplay(titles []*types.Title, incFunc func()) {
+	incFunc()
 	ShowProgress(titles)
 }
 
 /*
 Formats a line to have `leftText`, `rightText` appear on the left and right sides
 of a window, respectively. Spacing is determined by the width `width`. Style is
-determined by the amount of processed and total units, `processed`, `total`, respectively.
+determined by the amount of downloaded, skipped, and total units, `downloaded`,
+`skipped`, `total`, respectively.
 */
-func formatLine(leftText, rightText string, processed, total uint32, totalWidth int, titleImages, episodeImages *types.Images) string {
+func formatLine(leftText, rightText string, download, skipped, total uint32, totalWidth int, titleImages, episodeImages *types.Images) string {
+	processed := download + skipped
 	spacing := max(totalWidth-len(leftText)-len(rightText), 1)
 
 	line := ""
@@ -153,9 +149,9 @@ func formatLine(leftText, rightText string, processed, total uint32, totalWidth 
 			/* If all title images processed, mark it to skip future renders. */
 			titleImages.Done = true
 		default:
-			/* If an episode was processed, check if its title was processed to mark it too. */
+			/* If an episode was fully processed, check if its title was processed to mark it too. */
 			episodeImages.Done = true
-			if titleImages.Processed() == titleImages.Total() {
+			if titleImages.Downloaded()+titleImages.Skipped() == titleImages.Total() {
 				titleImages.Done = true
 			}
 		}
@@ -180,8 +176,10 @@ Returns the string to be rendered at the right side of the progress bar.
 `processed`, `total`, `start` indicate the number of processed units, total units, and
 start time of the title or episode, respectively.
 */
-func getRightText(processed, skipped, total uint32, start time.Time) string {
-	eta := getETAString(processed, skipped, total, start)
+func getRightText(downloaded, skipped, total uint32, start time.Time) string {
+	processed := downloaded + skipped
+
+	eta := getETAString(downloaded, skipped, total, start)
 	ratio := fmt.Sprintf("%*s", ratioWidth, fmt.Sprintf("(%d/%d)", processed, total))
 	pbar := createProgressBar(processed, total)
 	percentage := fmt.Sprintf("%*s", percentageWidth, fmt.Sprintf("%d%%", int(float64(processed)/float64(total)*100)))
@@ -209,6 +207,38 @@ func createProgressBar(amtProcessed uint32, total uint32) string {
 }
 
 /*
+Returns an ETA based on the start time `start`, and the number of downloaded, skipped,
+and total units, `downloaded`, `skipped`, `total`, respectively.
+*/
+func getETAString(downloaded, skipped, total uint32, start time.Time) string {
+	/* If no previous download data available, estimate using global download data. */
+	if downloaded == 0 {
+		globalDownloaded := types.GlobalDownloadedImages()
+		if globalDownloaded == 0 {
+			return "0s/--" // No download data available. No estimate!
+		}
+
+		globalElapsed := time.Since(downloadStart)
+		globalRate := float64(globalElapsed) / float64(globalDownloaded)
+		globalRemaining := time.Duration(globalRate * float64(total-downloaded-skipped)).Round(time.Second)
+		remainingWidth := len(globalRemaining.String())
+
+		return fmt.Sprintf("%*s", remainingWidth+5, fmt.Sprintf("(0s/%s)", globalRemaining))
+	}
+
+	/* Otherwise, use local download data to estimate. */
+	elapsed := time.Since(start)
+	rate := float64(elapsed) / float64(downloaded)
+	remaining := time.Duration(rate * float64(total-downloaded-skipped)).Round(time.Second)
+	elapsed = elapsed.Round(time.Second)
+
+	elapsedWidth := len(elapsed.String())
+	remainingWidth := len(remaining.String())
+
+	return fmt.Sprintf("%*s", elapsedWidth+remainingWidth+3, fmt.Sprintf("(%s/%s)", elapsed, remaining))
+}
+
+/*
 Returns the base episode name of episode `episode`.
 If the base name is unable to be extracted for whatever reason,
 the original name is returned.
@@ -224,47 +254,4 @@ func getBaseEpisodeName(episode *types.Episode) string {
 	}
 
 	return episode.Name
-}
-
-/*
-Returns an ETA based on the start time `start`, and the number of processed
-and total units, `processed`, `total`, respectively.
-
-Returns an empty string if `processed` is 0.
-*/
-func getETAString(processed, skipped, total uint32, start time.Time) string {
-	if total == processed {
-		return ""
-	}
-
-	downloaded := processed - skipped
-
-	/*
-		If no previous download data available for a title/episode,
-		estimate using global download data.
-	*/
-	if downloaded == 0 {
-		globalDownloaded := types.ProcessedTotal() - types.SkippedTotal()
-		if globalDownloaded == 0 {
-			return "0s/--" // No download data available. No estimate!
-		}
-		globalElapsed := time.Since(downloadStart)
-		globalRate := float64(globalElapsed) / float64(globalDownloaded)
-		globalRemaining := time.Duration(globalRate * float64(total-processed)).Round(time.Second)
-		remainingWidth := len(globalRemaining.String())
-
-		return fmt.Sprintf("%*s", remainingWidth+5, fmt.Sprintf("(0s/%s)", globalRemaining))
-	}
-
-	/* Otherwise, use local title/episode download estimate. */
-	elapsed := time.Since(start)
-	rate := float64(elapsed) / float64(downloaded)
-	remaining := time.Duration(rate * float64(total-processed))
-
-	elapsed = elapsed.Round(time.Second)
-	elapsedWidth := len(elapsed.String())
-	remaining = remaining.Round(time.Second)
-	remainingWidth := len(remaining.String())
-
-	return fmt.Sprintf("%*s", elapsedWidth+remainingWidth+3, fmt.Sprintf("(%s/%s)", elapsed, remaining))
 }

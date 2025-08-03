@@ -57,37 +57,33 @@ func DownloadImages(titles []*types.Title, flags cli.CLIFlags) {
 	var wg sync.WaitGroup
 	sema := make(chan struct{}, flags.ParallelDownloads)
 
-	downloadImg := func(imgDir string, url string, titleImages, episodeImages *types.Images) {
+	downloadImg := func(imgDir string, imgCon types.ImageContainer, url string) {
 		if imageExists(imgDir, url) {
-			if episodeImages != nil {
-				episodeImages.IncrementSkipped()
-			}
-			titleImages.IncrementSkipped()
-			progressbar.UpdateProgressDisplay(titles, titleImages, episodeImages)
+			progressbar.UpdateProgressDisplay(titles, imgCon.IncrementSkipped)
 			return
 		}
 
-		/* Initial delay. */
+		/* Pre-delay. */
 		jitterDelay(flags.MinDelay/2, flags.RandDelay/2)
 
 		sent := downloadImage(imgDir, url)
 
-		progressbar.UpdateProgressDisplay(titles, titleImages, episodeImages)
+		progressbar.UpdateProgressDisplay(titles, imgCon.IncrementDownloaded)
 
-		/* Post delay. Only delay the next image request, if one was sent in the first place. */
+		/* Post-delay. Only delay the next image request, if one was sent in the first place. */
 		if sent {
 			jitterDelay(flags.MinDelay/2, flags.RandDelay/2)
 		}
 	}
 
-	downloadImgAsync := func(imgDir, url string, titleImages, episodeImages *types.Images) {
+	downloadImgAsync := func(imgDir string, imgCon types.ImageContainer, url string) {
 		wg.Add(1)
 		sema <- struct{}{}
 		go func(url string) {
 			defer wg.Done()
 			defer func() { <-sema }()
 
-			downloadImg(imgDir, url, titleImages, episodeImages)
+			downloadImg(imgDir, imgCon, url)
 		}(url)
 	}
 
@@ -106,9 +102,9 @@ func DownloadImages(titles []*types.Title, flags cli.CLIFlags) {
 			URLs := title.Images.URLs()
 			for _, url := range URLs {
 				if flags.Async {
-					downloadImgAsync(titleDir, url, title.Images, nil)
+					downloadImgAsync(titleDir, title, url)
 				} else {
-					downloadImg(titleDir, url, title.Images, nil)
+					downloadImg(titleDir, title, url)
 				}
 			}
 
@@ -117,15 +113,15 @@ func DownloadImages(titles []*types.Title, flags cli.CLIFlags) {
 
 		/* For each episode... */
 		for _, episode := range title.Episodes {
-			imgDir := createEpisodeDir(titleDir, episode.Name)
+			episodeDir := createEpisodeDir(titleDir, episode.Name)
 
 			URLs := episode.Images.URLs()
 			episode.Start = time.Now()
 			for _, url := range URLs {
 				if flags.Async {
-					downloadImgAsync(imgDir, url, title.Images, episode.Images)
+					downloadImgAsync(episodeDir, episode, url)
 				} else {
-					downloadImg(imgDir, url, title.Images, episode.Images)
+					downloadImg(episodeDir, episode, url)
 				}
 			}
 		}
