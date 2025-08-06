@@ -72,11 +72,17 @@ func ParseSequenceString(seqStr string, max int, debug bool) ([]int, error) {
 			start := 1
 			if startStr != "" {
 				start, _ = strconv.Atoi(startStr)
+				if start < 1 {
+					return []int{}, fmt.Errorf("`start` cannot be less than one. (%d < 1)", start)
+				}
 			}
 
 			end := max
 			if endStr != "" {
 				end, _ = strconv.Atoi(endStr)
+				if end > max {
+					return []int{}, fmt.Errorf("`end` cannot be more than `max`. (%d > %d)", end, max)
+				}
 			}
 
 			step := 1

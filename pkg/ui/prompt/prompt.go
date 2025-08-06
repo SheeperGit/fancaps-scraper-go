@@ -10,8 +10,10 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"sheeper.com/fancaps-scraper-go/pkg/logf"
 	"sheeper.com/fancaps-scraper-go/pkg/seq"
 	"sheeper.com/fancaps-scraper-go/pkg/types"
+	"sheeper.com/fancaps-scraper-go/pkg/ui"
 )
 
 /* Style for help tips. */
@@ -107,19 +109,30 @@ func SelectEpisodes(titles []*types.Title, debug bool) []*types.Title {
 			var episodeRange []int
 			episodeRange, err = seq.ParseSequenceString(userRange, len(title.Episodes), debug)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "select episodes error: %v\ntry again.\n\n", err)
+				fmt.Fprintf(os.Stderr,
+					ui.ErrStyle.Render("%v")+"\n"+
+						ui.ErrStyle.Render("try again")+"\n\n",
+					err)
 			} else {
 				var selectedEpisodes []*types.Episode
 				lastFound := 0
 				for _, episodeNum := range episodeRange {
-					ep, index := getEpisodeByNumber(title.Episodes, lastFound, episodeNum) // Only need to starting from the last found episode
+					ep, index := getEpisodeByNumber(title.Episodes, lastFound, episodeNum) // Only need to search starting from the last found episode
 					if ep.Name != "" && !containsEpisode(selectedEpisodes, ep) {
 						selectedEpisodes = append(selectedEpisodes, ep)
 						lastFound = index
 					} else if containsEpisode(selectedEpisodes, ep) {
-						fmt.Fprintf(os.Stderr, "select episodes warning: episode %d already selected for %s\nskipping...\n\n", episodeNum, title.Name)
+						fmt.Fprintf(os.Stderr,
+							ui.ErrStyle.Render("warning: episode %d already selected for %s")+"\n"+
+								ui.ErrStyle.Render("skipping...")+"\n\n",
+							episodeNum, title.Name)
+						logf.LogErrorf(logf.LOG_WARNING, "Episode %d already selected for %s\nSkipping...", episodeNum, title.Name)
 					} else {
-						fmt.Fprintf(os.Stderr, "select episodes error: couldn't find episode %d in %s[%d-%d]\nskipping...\n\n", episodeNum, title.Name, lastFound, len(title.Episodes))
+						fmt.Fprintf(os.Stderr,
+							ui.ErrStyle.Render("error: couldn't find episode %d in %s[%d-%d]")+"\n"+
+								ui.ErrStyle.Render("skipping...")+"\n\n",
+							episodeNum, title.Name, lastFound, len(title.Episodes))
+						logf.LogErrorf(logf.LOG_ERROR, "Couldn't find episode %d in %s[%d-%d] Skipping...", episodeNum, title.Name, lastFound, len(title.Episodes))
 					}
 				}
 				title.Episodes = selectedEpisodes

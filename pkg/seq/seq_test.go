@@ -14,7 +14,7 @@ func TestParseSequenceString(t *testing.T) {
 
 	tests := []struct {
 		input     string // Sequence string to parse.
-		want      []int  // Expected output.
+		expected  []int  // Expected output.
 		expectErr bool   // True if an error is expected from the given input.
 	}{
 		{"1-5", []int{1, 2, 3, 4, 5}, false},
@@ -31,6 +31,9 @@ func TestParseSequenceString(t *testing.T) {
 		{"1-5:0", nil, true},
 		{"5-1:", []int{}, true},
 		{"3, 1-3, 23-2:0, 9-11", nil, true},
+		{"1-101", nil, true},
+		{"0-5", nil, true},
+		{"0-101", nil, true},
 	}
 
 	for _, tt := range tests {
@@ -49,8 +52,8 @@ func TestParseSequenceString(t *testing.T) {
 				return
 			}
 
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("parseSequenceString(%q) = %v; want %v", tt.input, got, tt.want)
+			if !reflect.DeepEqual(got, tt.expected) {
+				t.Errorf("parseSequenceString(%q) = %v; want %v", tt.input, got, tt.expected)
 			}
 		})
 	}
