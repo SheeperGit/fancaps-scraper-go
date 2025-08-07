@@ -3,6 +3,7 @@ package logf
 import (
 	"fmt"
 	"os"
+	"slices"
 	"sync"
 
 	"github.com/charmbracelet/lipgloss"
@@ -53,7 +54,18 @@ the operation has completed successfully.
 func PrintStats() {
 	if Logfile != "" {
 		fmt.Fprintln(os.Stderr, "\n\nLog Summary:")
-		for stat, amt := range Stats() {
+
+		/* Get stats. */
+		stats := Stats()
+		sevStats := []LogSeverity{}
+		for sev := range stats {
+			sevStats = append(sevStats, sev)
+		}
+		slices.Sort(sevStats) // Sort severity stats by enum order.
+
+		for _, sev := range sevStats {
+			amt := stats[sev]
+
 			var style lipgloss.Style
 			switch amt {
 			case 0:
@@ -61,7 +73,7 @@ func PrintStats() {
 			default:
 				style = ui.ErrStyle
 			}
-			fmt.Fprintf(os.Stderr, style.Render("\t%s: %d")+"\n", stat, amt)
+			fmt.Fprintf(os.Stderr, "\t"+style.Render("%s: %d")+"\n", SeverityName[sev], amt)
 		}
 		fmt.Fprintln(os.Stderr)
 
