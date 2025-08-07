@@ -51,10 +51,8 @@ If there are no statistics, this function prints a message indicating
 the operation has completed successfully.
 */
 func PrintStats() {
-	fmt.Printf("\n\n")
-
 	if Logfile != "" {
-		fmt.Fprintln(os.Stderr, "Log Summary:")
+		fmt.Fprintln(os.Stderr, "\n\nLog Summary:")
 		for stat, amt := range Stats() {
 			var style lipgloss.Style
 			switch amt {
@@ -67,9 +65,10 @@ func PrintStats() {
 		}
 		fmt.Fprintln(os.Stderr)
 
-		fmt.Fprintln(os.Stderr, ui.ErrStyle.Render("Logs found which may require your attention."))
-		fmt.Fprintln(os.Stderr, ui.ErrStyle.Render("Check logfile for further details:"))
-		fmt.Fprintf(os.Stderr, "\t%s\n", Logfile)
+		fmt.Fprintf(os.Stderr,
+			ui.ErrStyle.Render("Logs found which may require your attention.")+"\n"+
+				ui.ErrStyle.Render("Check logfile for further details:")+"\n"+
+				"\t%s\n", Logfile)
 	} else {
 		fmt.Println(ui.SuccessStyle.Render("Operation completed successfully!"))
 	}

@@ -53,7 +53,7 @@ func LogErrorf(logSev LogSeverity, format string, args ...any) {
 
 	f, err := os.OpenFile(Logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to open error log: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Failed to open logfile: %v\n", err)
 		os.Exit(1)
 	}
 	defer f.Close()

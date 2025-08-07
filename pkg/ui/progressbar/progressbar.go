@@ -54,7 +54,10 @@ func ShowProgress(titles []*types.Title) {
 
 	termWidth, _, err := term.GetSize(int(os.Stdin.Fd()))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to get terminal width. %v\nDefaulting to %d...\n", err, defaultTermWidth)
+		fmt.Fprintf(os.Stderr,
+			"Failed to get terminal width. %v\n"+
+				"Defaulting to %d...\n",
+			err, defaultTermWidth)
 		termWidth = defaultTermWidth
 	}
 

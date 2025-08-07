@@ -135,8 +135,10 @@ Movie images will be saved to "./`dirname`/<Movie_Name>/".
 func createOutputDir(dirname string) string {
 	/* Check (for a second time) that the parent directories still exist. */
 	if !cli.ParentDirsExist(dirname) {
-		fmt.Fprintf(os.Stderr, "createOutputDir error: Couldn't find parent directories of '%s'\n", dirname)
-		fmt.Fprintf(os.Stderr, "Make sure the parent directories still exist at runtime.\n")
+		fmt.Fprintf(os.Stderr,
+			"createOutputDir error: Couldn't find parent directories of `%s`\n"+
+				"Make sure the parent directories still exist at runtime.\n",
+			dirname)
 		os.Exit(1)
 	}
 
@@ -213,8 +215,9 @@ func downloadImage(imgDir string, url string) bool {
 	defer res.Body.Close()
 
 	if res.StatusCode == http.StatusTooManyRequests || res.StatusCode == http.StatusForbidden {
-		fmt.Fprintln(os.Stderr, "You are being rate-limited. Try again later.")
-		fmt.Fprintln(os.Stderr, "Hint: Try setting `--parallel-downloads` to a lower value.")
+		fmt.Fprintln(os.Stderr,
+			"You are being rate-limited. Try again later."+"\n"+
+				"Hint: Try setting `--parallel-downloads` to a lower value.")
 		os.Exit(2)
 	} else if res.StatusCode != http.StatusOK {
 		logf.LogErrorf(logf.LOG_ERROR, "Bad status code: %d for URL: %s", res.StatusCode, url)

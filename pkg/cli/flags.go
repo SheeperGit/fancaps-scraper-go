@@ -82,8 +82,10 @@ func ParseCLI() ([]string, CLIFlags) {
 		Run: func(cmd *cobra.Command, args []string) {
 			/* Check that the parent directories exist. */
 			if !ParentDirsExist(outputDir) {
-				fmt.Fprintf(os.Stderr, ui.ErrStyle.Render("couldn't find parent directories of '%s'")+"\n", outputDir)
-				fmt.Fprintln(os.Stderr, ui.ErrStyle.Render("make sure the parent directories exists."))
+				fmt.Fprintf(os.Stderr,
+					ui.ErrStyle.Render("couldn't find parent directories of `%s`")+"\n"+
+						ui.ErrStyle.Render("make sure the parent directories exists.")+"\n",
+					outputDir)
 				os.Exit(1)
 			}
 			flags.OutputDir = outputDir // Title directories go here.
@@ -125,7 +127,7 @@ func ParseCLI() ([]string, CLIFlags) {
 						flags.Categories = append(flags.Categories, cat)
 						seen[cat] = true
 					} else if !ok {
-						fmt.Fprintf(os.Stderr, "unknown category '%s'. valid options are: anime, tv, movies, all\n", part)
+						fmt.Fprintf(os.Stderr, "unknown category `%s`. valid options are: anime, tv, movies, all\n", part)
 						os.Exit(1)
 					}
 				}
@@ -159,10 +161,10 @@ func ParseCLI() ([]string, CLIFlags) {
 
 					url := BuildQueryURL(query, flags.Categories)
 					if !titleExists(url, flags) {
-						fmt.Fprintf(os.Stderr, ui.ErrStyle.Render("no titles found for query '%s'.")+"\n\n", query)
+						fmt.Fprintf(os.Stderr, ui.ErrStyle.Render("no titles found for query `%s`.")+"\n\n", query)
 						continue
 					}
-					fmt.Printf(ui.SuccessStyle.Render("Found titles for query: '%s'")+"\n", query)
+					fmt.Printf(ui.SuccessStyle.Render("Found titles for query: `%s`")+"\n", query)
 					searchURLs = append(searchURLs, url)
 					queries = append(queries, query)
 				}
@@ -183,7 +185,7 @@ func ParseCLI() ([]string, CLIFlags) {
 					i, url := i, url // https://golang.org/doc/faq#closures_and_goroutines
 					eg.Go(func() error {
 						if !titleExists(url, flags) {
-							return fmt.Errorf("no titles found for query '%s'", queries[i])
+							return fmt.Errorf("no titles found for query `%s`", queries[i])
 						}
 						return nil
 					})

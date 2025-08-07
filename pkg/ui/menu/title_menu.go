@@ -420,7 +420,10 @@ func (m *titleModel) setTabWrapLeft() {
 	case 0: // Go to last tab, if at the first tab.
 		m.activeTab = m.Tabs[len(m.Tabs)-1]
 	case -1: // Fallback on first tab, if category to switch to was not found.
-		fmt.Fprintf(os.Stderr, "title menu error: failed to find %s in tabs.\ndefaulting to first tab...\n\n", m.activeTab.String())
+		fmt.Fprintf(os.Stderr,
+			"title menu error: failed to find %s in tabs.\n"+
+				"defaulting to first tab...\n\n",
+			m.activeTab.String())
 		m.activeTab = m.Tabs[0]
 	default: // Go to previous tab, otherwise.
 		m.activeTab = m.Tabs[i-1]
@@ -441,7 +444,10 @@ func (m *titleModel) setTabWrapRight() {
 	case len(m.Tabs) - 1: // Go to first tab, if at the last tab.
 		m.activeTab = m.Tabs[0]
 	case -1: // Fallback on last tab, if category to switch to was not found.
-		fmt.Fprintf(os.Stderr, "title menu error: failed to find %s in tabs.\ndefaulting to last tab...\n\n", m.activeTab.String())
+		fmt.Fprintf(os.Stderr,
+			"title menu error: failed to find %s in tabs.\n"+
+				"defaulting to last tab...\n\n",
+			m.activeTab.String())
 		m.activeTab = m.Tabs[len(m.Tabs)-1]
 	default: // Go to next tab, otherwise.
 		m.activeTab = m.Tabs[i+1]
