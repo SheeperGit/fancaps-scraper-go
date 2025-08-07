@@ -4,9 +4,9 @@ package types
 type Category int
 
 const (
-	CategoryAnime Category = iota
-	CategoryTV
-	CategoryMovie
+	CategoryAnime Category = iota // Anime category.
+	CategoryTV                    // TV Series category.
+	CategoryMovie                 // Movie category.
 )
 
 var CategoryName = map[Category]string{
@@ -20,7 +20,7 @@ func (cat Category) String() string {
 	return CategoryName[cat]
 }
 
-/* Thread-safe category amounts. */
+/* Category statistics. */
 type CatStats struct {
 	Amts map[Category]int // Amount of titles per category.
 	Max  int              // Highest amount of titles from all categories.

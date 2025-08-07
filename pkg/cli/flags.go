@@ -11,6 +11,7 @@ import (
 	"github.com/gocolly/colly"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
+	"sheeper.com/fancaps-scraper-go/pkg/logf"
 	"sheeper.com/fancaps-scraper-go/pkg/types"
 	"sheeper.com/fancaps-scraper-go/pkg/ui"
 	"sheeper.com/fancaps-scraper-go/pkg/ui/menu"
@@ -85,7 +86,8 @@ func ParseCLI() ([]string, CLIFlags) {
 				fmt.Fprintln(os.Stderr, ui.ErrStyle.Render("make sure the parent directories exists."))
 				os.Exit(1)
 			}
-			flags.OutputDir = outputDir
+			flags.OutputDir = outputDir // Title directories go here.
+			logf.LogDir = outputDir     // Log file goes here too.
 
 			/* Check that parallel downloads is non-zero. */
 			if parallelDownloads == 0 {
