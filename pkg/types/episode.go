@@ -26,6 +26,11 @@ func (e *Episode) GetStart() time.Time {
 	return e.Start
 }
 
+/* Returns whether all the downloads of images of episode `e` are done. */
+func (e *Episode) GetDone() bool {
+	return e.Images.Done
+}
+
 /* Returns the number of downloaded images for episode `e`. */
 func (e *Episode) Downloaded() uint32 {
 	return e.Images.Downloaded()

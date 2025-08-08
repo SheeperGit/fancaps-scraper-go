@@ -19,6 +19,7 @@ type ImageContainer interface {
 	GetName() string
 	GetTitle() *Title
 	GetStart() time.Time
+	GetDone() bool
 	Downloaded() uint32
 	Skipped() uint32
 	Total() uint32

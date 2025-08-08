@@ -27,6 +27,11 @@ func (t *Title) GetStart() time.Time {
 	return t.Start
 }
 
+/* Returns whether all the downloads of images of title `t` are done. */
+func (t *Title) GetDone() bool {
+	return t.Images.Done
+}
+
 /* Returns the number of downloaded images from title `t`. */
 func (t *Title) Downloaded() uint32 {
 	var downloaded uint32

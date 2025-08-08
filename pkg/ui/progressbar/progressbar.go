@@ -11,6 +11,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"golang.org/x/term"
+	"sheeper.com/fancaps-scraper-go/pkg/logf"
 	"sheeper.com/fancaps-scraper-go/pkg/types"
 	"sheeper.com/fancaps-scraper-go/pkg/ui"
 )
@@ -57,7 +58,7 @@ func ShowProgress(titles []*types.Title) {
 
 	termWidth, _, err := term.GetSize(int(os.Stdin.Fd()))
 	if err != nil {
-		fmt.Fprintf(os.Stderr,
+		logf.LogErrorf(logf.LOG_WARNING,
 			"Failed to get terminal width. %v\n"+
 				"Defaulting to %d...\n",
 			err, defaultTermWidth)
@@ -69,34 +70,19 @@ func ShowProgress(titles []*types.Title) {
 		fmt.Printf("\x1b[%dA", lastPrintedLines) // ANSI escape: move cursor up N lines
 	}
 
-	linesCount := 0
+	printedLines := 0
 	for _, title := range titles {
-		/* Render title progress, if not done. */
-		if !title.Images.Done {
-			line := formatLine(title, termWidth)
-			fmt.Printf("\r%s\n", line)
-		} else {
-			fmt.Println()
-		}
-		linesCount++
+		printedLines += renderDownloadProgress(title, termWidth)
 
 		for _, episode := range title.Episodes {
-			/* Render episode progress, if not done. */
-			if !episode.Images.Done {
-				line := formatLine(episode, termWidth)
-				fmt.Printf("\r%s\n", line)
-			} else {
-				fmt.Println()
-			}
-			linesCount++
+			printedLines += renderDownloadProgress(episode, termWidth)
 		}
 	}
 
-	line := formatLine(noContainer, termWidth)
-	fmt.Printf("\r\n%s\n", line)
-	linesCount = linesCount + 2
+	/* Render total progress line. */
+	printedLines += renderDownloadProgress(noContainer, termWidth)
 
-	lastPrintedLines = linesCount
+	lastPrintedLines = printedLines
 }
 
 /*
@@ -109,13 +95,26 @@ func UpdateProgressDisplay(titles []*types.Title, incFunc func()) {
 }
 
 /*
-Formats a line to have a "leftText", "rightText" appear on the left and right sides
-of a window, respectively.
+Prints a progress line and returns the number of lines printed.
+
+The text appearing on the left and right sides of the progress line.
+
 Spacing is determined by the width `totalWidth`.
-Line style is determined by the amount of downloaded, skipped, and total units in the
-image container `imgCon`.
+
+Line style is determined by progress status of the image container `imgCon`.
 */
-func formatLine(imgCon types.ImageContainer, totalWidth int) string {
+func renderDownloadProgress(imgCon types.ImageContainer, totalWidth int) int {
+	/* If progress is done, skip rendering the line. */
+	switch imgCon.(type) {
+	case nil:
+		// Do nothing. (We always render the total progress line.)
+	case *types.Title, *types.Episode:
+		if imgCon.GetDone() {
+			fmt.Println()
+			return 1
+		}
+	}
+
 	/*
 		Returns the string to be rendered at the left side of the progress bar.
 
@@ -205,8 +204,18 @@ func formatLine(imgCon types.ImageContainer, totalWidth int) string {
 	}
 
 	spacing := max(totalWidth-len(leftText)-len(rightText), 1)
+	line := lineStyle.Render(leftText + strings.Repeat(" ", spacing) + rightText)
 
-	return lineStyle.Render(leftText + strings.Repeat(" ", spacing) + rightText)
+	format := ""
+	switch imgCon.(type) {
+	case nil:
+		format = "\r\n%s\n"
+	case *types.Title, *types.Episode:
+		format = "\r%s\n"
+	}
+	fmt.Printf(format, line)
+
+	return strings.Count(format, "\n")
 }
 
 /*
