@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/charmbracelet/lipgloss"
 	"golang.org/x/term"
 	"sheeper.com/fancaps-scraper-go/pkg/types"
 	"sheeper.com/fancaps-scraper-go/pkg/ui"
@@ -30,6 +31,8 @@ const (
 	episodeSpacing = 3 // Spacing applied to episode names on a progress line.
 	totalSpacing   = 0 // Spacing applied to the total progress line.
 )
+
+var noContainer types.ImageContainer = nil // Stand-in for rendering the total progress line.
 
 var (
 	progressMu       sync.Mutex // Limits progress bar access to one thread.
@@ -70,14 +73,7 @@ func ShowProgress(titles []*types.Title) {
 	for _, title := range titles {
 		/* Render title progress, if not done. */
 		if !title.Images.Done {
-			downloaded := title.Images.Downloaded()
-			skipped := title.Images.Skipped()
-			total := title.Images.Total()
-
-			leftText := getLeftText(title.Name, titleSpacing)
-			rightText := getRightText(downloaded, skipped, total, title.Start)
-
-			line := formatLine(leftText, rightText, downloaded, skipped, total, termWidth, title.Images, nil)
+			line := formatLine(title, termWidth)
 			fmt.Printf("\r%s\n", line)
 		} else {
 			fmt.Println()
@@ -87,15 +83,7 @@ func ShowProgress(titles []*types.Title) {
 		for _, episode := range title.Episodes {
 			/* Render episode progress, if not done. */
 			if !episode.Images.Done {
-				downloaded := episode.Images.Downloaded()
-				skipped := episode.Images.Skipped()
-				total := episode.Images.Total()
-
-				baseEpisodeName := getBaseEpisodeName(episode)
-				leftText := getLeftText(baseEpisodeName, episodeSpacing)
-				rightText := getRightText(downloaded, skipped, total, episode.Start)
-
-				line := formatLine(leftText, rightText, downloaded, skipped, total, termWidth, title.Images, episode.Images)
+				line := formatLine(episode, termWidth)
 				fmt.Printf("\r%s\n", line)
 			} else {
 				fmt.Println()
@@ -103,14 +91,8 @@ func ShowProgress(titles []*types.Title) {
 			linesCount++
 		}
 	}
-	totalDownloaded := types.GlobalDownloadedImages()
-	totalSkipped := types.GlobalSkippedImages()
-	totalImgs := types.GlobalTotalImages()
 
-	leftText := getLeftText("Total: ", totalSpacing)
-	rightText := getRightText(totalDownloaded, totalSkipped, totalImgs, downloadStart)
-
-	line := formatLine(leftText, rightText, totalDownloaded, totalSkipped, totalImgs, termWidth, nil, nil)
+	line := formatLine(noContainer, termWidth)
 	fmt.Printf("\r\n%s\n", line)
 	linesCount = linesCount + 2
 
@@ -127,72 +109,104 @@ func UpdateProgressDisplay(titles []*types.Title, incFunc func()) {
 }
 
 /*
-Formats a line to have `leftText`, `rightText` appear on the left and right sides
-of a window, respectively. Spacing is determined by the width `width`. Style is
-determined by the amount of downloaded, skipped, and total units, `downloaded`,
-`skipped`, `total`, respectively.
+Formats a line to have a "leftText", "rightText" appear on the left and right sides
+of a window, respectively.
+Spacing is determined by the width `totalWidth`.
+Line style is determined by the amount of downloaded, skipped, and total units in the
+image container `imgCon`.
 */
-func formatLine(leftText, rightText string, download, skipped, total uint32, totalWidth int, titleImages, episodeImages *types.Images) string {
-	processed := download + skipped
-	spacing := max(totalWidth-len(leftText)-len(rightText), 1)
+func formatLine(imgCon types.ImageContainer, totalWidth int) string {
+	/*
+		Returns the string to be rendered at the left side of the progress bar.
 
-	line := ""
+		Namely, the name of either a title or episode, given by `name`,
+		prefixed with `spacing` amount of whitespaces.
+	*/
+	getLeftText := func(name string, spacing int) string {
+		return strings.Repeat(" ", spacing) + name
+	}
+
+	/*
+		Returns the string to be rendered at the right side of the progress bar.
+
+		`downloaded`, `total`, `start` indicate the number of downloaded units, total units, and
+		start time of the title or episode, respectively.
+	*/
+	getRightText := func(downloaded, skipped, total uint32, start time.Time) string {
+		processed := downloaded + skipped
+
+		eta := getETAString(downloaded, skipped, total, start)
+		ratio := fmt.Sprintf("%*s", ratioWidth, fmt.Sprintf("(%d/%d)", processed, total))
+		pbar := createProgressBar(processed, total)
+		percentage := fmt.Sprintf("%*s", percentageWidth, fmt.Sprintf("%d%%", int(float64(processed)/float64(total)*100)))
+
+		return strings.Join([]string{
+			eta,
+			ratio,
+			pbar,
+			percentage,
+		}, " ")
+	}
+
+	var downloaded uint32
+	var skipped uint32
+	var total uint32
+	switch imgCon.(type) {
+	case nil:
+		downloaded = types.GlobalDownloadedImages()
+		skipped = types.GlobalSkippedImages()
+		total = types.GlobalTotalImages()
+	case *types.Title, *types.Episode:
+		downloaded = imgCon.Downloaded()
+		skipped = imgCon.Skipped()
+		total = imgCon.Total()
+	}
+
+	leftText := ""
+	rightText := ""
+	switch imgCon.(type) {
+	case nil:
+		leftText = getLeftText("Total: ", totalSpacing)
+		rightText = getRightText(downloaded, skipped, total, downloadStart)
+	case *types.Title:
+		leftText = getLeftText(imgCon.GetName(), titleSpacing)
+		rightText = getRightText(downloaded, skipped, total, imgCon.GetStart())
+	case *types.Episode:
+		baseEpisodeName := getBaseEpisodeName(imgCon.GetName())
+		leftText = getLeftText(baseEpisodeName, episodeSpacing)
+		rightText = getRightText(downloaded, skipped, total, imgCon.GetStart())
+	}
+
+	processed := downloaded + skipped
+
+	var lineStyle lipgloss.Style
 	switch {
 	case processed == 0:
-		line = leftText + strings.Repeat(" ", spacing) + rightText
+		// No styling.
 	case processed < total:
-		line = ui.HighlightStyle.Render(leftText + strings.Repeat(" ", spacing) + rightText)
+		lineStyle = ui.HighlightStyle
 	case processed == total:
-		line = ui.SuccessStyle.Render(leftText + strings.Repeat(" ", spacing) + rightText)
+		lineStyle = ui.SuccessStyle
 
-		switch {
-		case titleImages == nil:
+		switch imgCon.(type) {
+		case nil:
 			// Do nothing. (We're on the total progress line, so we're done rendering!)
-		case episodeImages == nil:
-			/* If all title images processed, mark it to skip future renders. */
-			titleImages.Done = true
-		default:
+		case *types.Title:
+			imgCon.MarkDone() // Mark title as done.
+		case *types.Episode:
+			imgCon.MarkDone() // Mark episode as done.
+
 			/* If an episode was fully processed, check if its title was processed to mark it too. */
-			episodeImages.Done = true
-			if titleImages.Downloaded()+titleImages.Skipped() == titleImages.Total() {
-				titleImages.Done = true
+			parentTitle := imgCon.GetTitle()
+			if parentTitle.Downloaded()+parentTitle.Skipped() == parentTitle.Total() {
+				parentTitle.MarkDone()
 			}
 		}
 	}
 
-	return line
-}
+	spacing := max(totalWidth-len(leftText)-len(rightText), 1)
 
-/*
-Returns the string to be rendered at the left side of the progress bar.
-
-Namely, the name of either a title or episode, given by `name`,
-prefixed with `spacing` amount of whitespaces.
-*/
-func getLeftText(name string, spacing int) string {
-	return strings.Repeat(" ", spacing) + name
-}
-
-/*
-Returns the string to be rendered at the right side of the progress bar.
-
-`processed`, `total`, `start` indicate the number of processed units, total units, and
-start time of the title or episode, respectively.
-*/
-func getRightText(downloaded, skipped, total uint32, start time.Time) string {
-	processed := downloaded + skipped
-
-	eta := getETAString(downloaded, skipped, total, start)
-	ratio := fmt.Sprintf("%*s", ratioWidth, fmt.Sprintf("(%d/%d)", processed, total))
-	pbar := createProgressBar(processed, total)
-	percentage := fmt.Sprintf("%*s", percentageWidth, fmt.Sprintf("%d%%", int(float64(processed)/float64(total)*100)))
-
-	return strings.Join([]string{
-		eta,
-		ratio,
-		pbar,
-		percentage,
-	}, " ")
+	return lineStyle.Render(leftText + strings.Repeat(" ", spacing) + rightText)
 }
 
 /*
@@ -242,19 +256,19 @@ func getETAString(downloaded, skipped, total uint32, start time.Time) string {
 }
 
 /*
-Returns the base episode name of episode `episode`.
+Returns the base episode name of episode name `name`.
 If the base name is unable to be extracted for whatever reason,
 the original name is returned.
 
 For example, "Episode 2 of Neon Genesis Evangelion" -> "Episode 2"
 */
-func getBaseEpisodeName(episode *types.Episode) string {
+func getBaseEpisodeName(name string) string {
 	re := regexp.MustCompile(`^(.*?)\s+of\b`)
 
-	matches := re.FindStringSubmatch(episode.Name)
+	matches := re.FindStringSubmatch(name)
 	if len(matches) > 1 {
 		return matches[1]
 	}
 
-	return episode.Name
+	return name
 }

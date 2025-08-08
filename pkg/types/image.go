@@ -1,6 +1,9 @@
 package types
 
-import "sync"
+import (
+	"sync"
+	"time"
+)
 
 /* Image info on either a title or episode. */
 type Images struct {
@@ -13,6 +16,13 @@ type Images struct {
 }
 
 type ImageContainer interface {
+	GetName() string
+	GetTitle() *Title
+	GetStart() time.Time
+	Downloaded() uint32
+	Skipped() uint32
+	Total() uint32
+	MarkDone()
 	IncrementDownloaded()
 	IncrementSkipped()
 	IncrementImageTotal()
