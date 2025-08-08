@@ -69,20 +69,19 @@ func ShowProgress(titles []*types.Title) {
 	if lastPrintedLines > 0 {
 		fmt.Printf("\x1b[%dA", lastPrintedLines) // ANSI escape: move cursor up N lines
 	}
+	lastPrintedLines = 0
 
-	printedLines := 0
+	/* Render the progress of each title and its episodes. */
 	for _, title := range titles {
-		printedLines += renderDownloadProgress(title, termWidth)
+		lastPrintedLines += renderDownloadProgress(title, termWidth)
 
 		for _, episode := range title.Episodes {
-			printedLines += renderDownloadProgress(episode, termWidth)
+			lastPrintedLines += renderDownloadProgress(episode, termWidth)
 		}
 	}
 
 	/* Render total progress line. */
-	printedLines += renderDownloadProgress(noContainer, termWidth)
-
-	lastPrintedLines = printedLines
+	lastPrintedLines += renderDownloadProgress(noContainer, termWidth)
 }
 
 /*
