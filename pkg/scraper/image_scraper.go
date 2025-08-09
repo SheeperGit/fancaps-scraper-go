@@ -26,8 +26,9 @@ var CategoryURLMap = map[types.Category]string{
 }
 
 /* Get images from titles `titles`. */
-func GetImages(titles []*types.Title, flags cli.CLIFlags) {
+func GetImages(titles []*types.Title) {
 	var wg sync.WaitGroup
+	flags := cli.Flags()
 
 	/* For each title... */
 	for _, title := range titles {

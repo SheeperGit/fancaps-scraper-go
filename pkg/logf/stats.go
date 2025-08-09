@@ -46,11 +46,7 @@ func Stats() map[LogSeverity]int {
 	return copy
 }
 
-/*
-Prints log statistics.
-If there are no statistics, this function prints a message indicating
-the operation has completed successfully.
-*/
+/* Prints log statistics. */
 func PrintStats() {
 	if Logfile != "" {
 		fmt.Fprintln(os.Stderr, "\n\nLog Summary:")
@@ -75,13 +71,10 @@ func PrintStats() {
 			}
 			fmt.Fprintf(os.Stderr, "\t"+style.Render("%s: %d")+"\n", SeverityName[sev], amt)
 		}
-		fmt.Fprintln(os.Stderr)
 
-		fmt.Fprintf(os.Stderr,
-			ui.ErrStyle.Render("Logs found which may require your attention.")+"\n"+
-				ui.ErrStyle.Render("Check logfile for further details:")+"\n"+
-				"\t%s\n", Logfile)
-	} else {
-		fmt.Println(ui.SuccessStyle.Render("Operation completed successfully!"))
+		fmt.Fprintf(os.Stderr, "\n"+
+			ui.ErrStyle.Render("Logs found which may interest you.")+"\n"+
+			ui.ErrStyle.Render("Check logfile for further details:")+"\n"+
+			"\t%s\n", Logfile)
 	}
 }

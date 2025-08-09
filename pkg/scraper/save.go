@@ -20,8 +20,9 @@ import (
 )
 
 /* Download images from titles `titles`. */
-func DownloadImages(titles []*types.Title, flags cli.CLIFlags) {
+func DownloadImages(titles []*types.Title) {
 	var wg sync.WaitGroup
+	flags := cli.Flags()
 	sema := make(chan struct{}, flags.ParallelDownloads)
 
 	downloadImg := func(imgDir string, imgCon types.ImageContainer, url string) {

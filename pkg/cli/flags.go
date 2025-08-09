@@ -28,7 +28,10 @@ type CLIFlags struct {
 	RandDelay         uint32           // Maximum random delay applied after subsequent image requests. (In milliseconds)
 	Async             bool             // If true, enable asynchronous network requests.
 	Debug             bool             // If true, print useful debugging messages.
+	NoLog             bool             // If true, disable logging.
 }
+
+var flags CLIFlags // User CLI flags.
 
 const (
 	exampleUsage = `
@@ -62,7 +65,6 @@ associated with each query's search URL.
 */
 func ParseCLI() ([]string, CLIFlags) {
 	var (
-		flags             CLIFlags
 		queries           []string
 		categories        string
 		outputDir         string
@@ -71,6 +73,7 @@ func ParseCLI() ([]string, CLIFlags) {
 		randDelay         uint32
 		async             bool
 		debug             bool
+		nolog             bool
 	)
 
 	var searchURLs []string
@@ -88,8 +91,7 @@ func ParseCLI() ([]string, CLIFlags) {
 					outputDir)
 				os.Exit(1)
 			}
-			flags.OutputDir = outputDir // Title directories go here.
-			logf.LogDir = outputDir     // Log file goes here too.
+			flags.OutputDir = outputDir
 
 			/* Check that parallel downloads is non-zero. */
 			if parallelDownloads == 0 {
@@ -200,6 +202,9 @@ func ParseCLI() ([]string, CLIFlags) {
 			flags.MinDelay = minDelay
 			flags.RandDelay = randDelay
 			flags.Debug = debug
+			flags.NoLog = nolog
+
+			logf.SetConfig(flags.NoLog, flags.OutputDir)
 		},
 	}
 
@@ -212,6 +217,7 @@ func ParseCLI() ([]string, CLIFlags) {
 	rootCmd.Flags().Uint32Var(&randDelay, "random-delay", defaultRandDelay, "Maximum random delay applied after subsequent image requests. (In milliseconds)")
 	rootCmd.Flags().BoolVar(&async, "async", true, "Enable asynchronous requests")
 	rootCmd.Flags().BoolVar(&debug, "debug", false, "Enable debug mode")
+	rootCmd.Flags().BoolVar(&nolog, "no-log", false, "Disable logging")
 
 	/* "Override" default help. */
 	rootCmd.Flags().BoolP("help", "h", false, "Display this help and exit")
@@ -226,6 +232,11 @@ func ParseCLI() ([]string, CLIFlags) {
 	}
 
 	return searchURLs, flags
+}
+
+/* Returns a copy of the CLI flags. */
+func Flags() CLIFlags {
+	return flags
 }
 
 /*

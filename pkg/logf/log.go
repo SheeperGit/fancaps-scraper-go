@@ -26,8 +26,6 @@ var SeverityName = map[LogSeverity]string{
 	LOG_WARNING: "WARNING",
 }
 
-var LogDir string // Log file directory. Same as titles directory.
-
 var (
 	setOnce        sync.Once // Initializes certain logging variables.
 	Logfile        string    // Path to log file. Contains logs of varying severity. Non-empty, if something unexpected happened.
@@ -39,8 +37,13 @@ Appends errors to a log file, as defined by its severity `severity`, format `for
 arguments `args`. Errors are timestamped with nanosecond precision.
 */
 func LogErrorf(logSev LogSeverity, format string, args ...any) {
+	if cfg.noLog {
+		return
+	}
+
 	setOnce.Do(func() {
 		fileTimestamp := time.Now().Format("2006-01-02_15-04-05.000000000") // Nanosecond precision.
+		LogDir := cfg.outputDir
 		Logfile = filepath.Join(LogDir, fmt.Sprintf("fsg_errors_%s.txt", fileTimestamp))
 
 		maxSeverityLen := 0

@@ -12,8 +12,9 @@ import (
 )
 
 /* Get episodes from titles `titles`. */
-func GetEpisodes(titles []*types.Title, flags cli.CLIFlags) []*types.Title {
+func GetEpisodes(titles []*types.Title) []*types.Title {
 	var wg sync.WaitGroup
+	flags := cli.Flags()
 
 	if flags.Debug {
 		fmt.Println("\nEPISODE LINKS VISITED:")

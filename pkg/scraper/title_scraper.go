@@ -21,13 +21,15 @@ var seasonRegex = regexp.MustCompile(` Season (\d+)`) // Extracts a title's seas
 Returns a non-empty, unique, sorted list of titles found through the URLs `searchURLs`,
 which are assumed to be validated (have at least one title associated with each URL).
 */
-func GetTitles(searchURLs []string, flags cli.CLIFlags) []*types.Title {
+func GetTitles(searchURLs []string) []*types.Title {
 	var (
 		titles   []*types.Title              // Scraped titles.
 		titlesMu sync.Mutex                  // Prevents overlapping "appends" to `titles`.
 		wg       sync.WaitGroup              // Synchronizes title scrapers.
 		seen     = make(map[string]struct{}) // Duplicate titles protection.
 	)
+
+	flags := cli.Flags()
 
 	for _, searchURL := range searchURLs {
 		wg.Add(1)

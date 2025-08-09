@@ -13,22 +13,22 @@ func main() {
 	searchURLs, flags := cli.ParseCLI()
 
 	/* Get titles matching user query. */
-	titles := scraper.GetTitles(searchURLs, flags)
+	titles := scraper.GetTitles(searchURLs)
 
 	/* Allow the user to choose which titles to scrape from. */
 	selectedTitles := menu.LaunchTitleMenu(titles, flags.Categories, flags.Debug)
 
 	/* Get episodes from selected titles. */
-	scraper.GetEpisodes(selectedTitles, flags)
+	scraper.GetEpisodes(selectedTitles)
 
 	/* Select episodes to scrape from each title. */
 	prompt.SelectEpisodes(selectedTitles, flags.Debug)
 
 	/* Collect images from the selected titles and episodes. */
-	scraper.GetImages(selectedTitles, flags)
+	scraper.GetImages(selectedTitles)
 
 	/* Download images from the selected titles and episodes. */
-	scraper.DownloadImages(selectedTitles, flags)
+	scraper.DownloadImages(selectedTitles)
 
 	/* Print info that may require user attention. Otherwise, indicate success. */
 	logf.PrintStats()
