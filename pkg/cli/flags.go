@@ -2,20 +2,16 @@ package cli
 
 import (
 	"fmt"
-	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 
-	"github.com/gocolly/colly"
 	"github.com/spf13/cobra"
-	"golang.org/x/sync/errgroup"
-	"sheeper.com/fancaps-scraper-go/pkg/logf"
+	"sheeper.com/fancaps-scraper-go/pkg/fsutil"
 	"sheeper.com/fancaps-scraper-go/pkg/types"
 	"sheeper.com/fancaps-scraper-go/pkg/ui"
 	"sheeper.com/fancaps-scraper-go/pkg/ui/menu"
-	"sheeper.com/fancaps-scraper-go/pkg/ui/prompt"
 )
 
 /* Available CLI Flags. */
@@ -57,13 +53,8 @@ const (
 
 var defaultOutputDir = filepath.Join(".", "output") // Default output directory.
 
-/*
-Returns a list of search URLs `searchURLs` to scrape from and the parsed CLI flags.
-
-`flags.Queries` always contains a non-empty list of queries with at least one title
-associated with each query's search URL.
-*/
-func ParseCLI() ([]string, CLIFlags) {
+/* Parses CLI flags. */
+func ParseCLI() {
 	var (
 		queries           []string
 		categories        string
@@ -76,15 +67,13 @@ func ParseCLI() ([]string, CLIFlags) {
 		nolog             bool
 	)
 
-	var searchURLs []string
-
 	rootCmd := &cobra.Command{
 		Use:     "fancaps-scraper",
 		Short:   "Scrape images from fancaps.net using a CLI interface",
 		Example: exampleUsage,
 		Run: func(cmd *cobra.Command, args []string) {
 			/* Check that the parent directories exist. */
-			if !ParentDirsExist(outputDir) {
+			if !fsutil.ParentDirsExist(outputDir) {
 				fmt.Fprintf(os.Stderr,
 					ui.ErrStyle.Render("couldn't find parent directories of `%s`")+"\n"+
 						ui.ErrStyle.Render("make sure the parent directories exists.")+"\n",
@@ -146,65 +135,12 @@ func ParseCLI() ([]string, CLIFlags) {
 			/* Sort according to Category enum order. */
 			slices.Sort(flags.Categories)
 
-			flags.Async = async
-
-			/* Query validation. */
-			if !cmd.Flags().Changed("query") {
-				/*
-					If `-q` not specified, prompt user for search query.
-					Validate search URLs incrementally.
-				*/
-				for len(queries) == 0 || prompt.YesNoPrompt("Enter another query? [y/N]: ", "") {
-					query := prompt.TextPrompt("Enter Search Query: ", prompt.QueryHelpPrompt)
-					if strings.TrimSpace(query) == "" {
-						fmt.Fprintln(os.Stderr, ui.ErrStyle.Render("search query cannot be empty.\n\n"))
-						continue
-					}
-
-					url := BuildQueryURL(query, flags.Categories)
-					if !titleExists(url, flags) {
-						fmt.Fprintf(os.Stderr, ui.ErrStyle.Render("no titles found for query `%s`.")+"\n\n", query)
-						continue
-					}
-					fmt.Printf(ui.SuccessStyle.Render("Found titles for query: `%s`")+"\n", query)
-					searchURLs = append(searchURLs, url)
-					queries = append(queries, query)
-				}
-				flags.Queries = queries
-			} else {
-				/* Validate search URLs all at once. */
-				for _, query := range queries {
-					if strings.TrimSpace(query) == "" {
-						fmt.Fprintln(os.Stderr, "search query cannot be empty.")
-						os.Exit(1)
-					}
-					url := BuildQueryURL(query, flags.Categories)
-					searchURLs = append(searchURLs, url)
-				}
-
-				var eg errgroup.Group
-				for i, url := range searchURLs {
-					i, url := i, url // https://golang.org/doc/faq#closures_and_goroutines
-					eg.Go(func() error {
-						if !titleExists(url, flags) {
-							return fmt.Errorf("no titles found for query `%s`", queries[i])
-						}
-						return nil
-					})
-
-					if err := eg.Wait(); err != nil {
-						fmt.Fprintln(os.Stderr, err)
-						os.Exit(1)
-					}
-				}
-			}
-
+			flags.Queries = queries
 			flags.MinDelay = minDelay
 			flags.RandDelay = randDelay
+			flags.Async = async
 			flags.Debug = debug
 			flags.NoLog = nolog
-
-			logf.SetConfig(flags.NoLog, flags.OutputDir)
 		},
 	}
 
@@ -230,86 +166,9 @@ func ParseCLI() ([]string, CLIFlags) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-
-	return searchURLs, flags
 }
 
 /* Returns a copy of the CLI flags. */
 func Flags() CLIFlags {
 	return flags
-}
-
-/*
-Returns a URL which will be used to scrape titles using query `query`,
-searching only categories in `categories`.
-*/
-func BuildQueryURL(query string, categories []types.Category) string {
-	params := url.Values{}
-	params.Add("q", query)
-
-	for _, cat := range categories {
-		switch cat {
-		case types.CategoryMovie:
-			params.Add("MoviesCB", "Movies")
-		case types.CategoryTV:
-			params.Add("TVCB", "TV")
-		case types.CategoryAnime:
-			params.Add("animeCB", "Anime")
-		}
-	}
-	params.Add("submit", "Submit Query")
-
-	const baseURL = "https://fancaps.net/search.php"
-	return baseURL + "?" + params.Encode()
-}
-
-/*
-Returns true, if the parent directories of `dirPath` exist
-and returns false otherwise.
-*/
-func ParentDirsExist(dirPath string) bool {
-	parentDirs := filepath.Dir(dirPath)
-
-	info, err := os.Stat(parentDirs)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return false
-		}
-		fmt.Fprintf(os.Stderr, "ParentDirsExist unexpected error: %v", err)
-		return false
-	}
-
-	return info.IsDir()
-}
-
-/* Returns true, if a title exists in the URL `searchURL`, and returns false otherwise. */
-func titleExists(searchURL string, flags CLIFlags) bool {
-	titleExists := false
-
-	scraperOpts := []func(*colly.Collector){
-		colly.AllowedDomains("fancaps.net"),
-	}
-
-	if flags.Async {
-		scraperOpts = append(scraperOpts, colly.Async(true))
-	}
-
-	c := colly.NewCollector(scraperOpts...)
-
-	/* Search the results of each category. */
-	c.OnHTML("div.single_post_content > table", func(e *colly.HTMLElement) {
-		/* Title found. */
-		e.ForEachWithBreak("h4 > a", func(_ int, _ *colly.HTMLElement) bool {
-			titleExists = true
-			return false // Stop searching for more titles.
-		})
-	})
-
-	c.Visit(searchURL)
-
-	if flags.Async {
-		c.Wait()
-	}
-
-	return titleExists
 }

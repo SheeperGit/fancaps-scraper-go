@@ -3,17 +3,16 @@ package scraper
 import (
 	"fmt"
 	"io"
-	"log"
 	"math/rand"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
 	"sheeper.com/fancaps-scraper-go/pkg/cli"
+	"sheeper.com/fancaps-scraper-go/pkg/fsutil"
 	"sheeper.com/fancaps-scraper-go/pkg/logf"
 	"sheeper.com/fancaps-scraper-go/pkg/types"
 	"sheeper.com/fancaps-scraper-go/pkg/ui/progressbar"
@@ -26,7 +25,7 @@ func DownloadImages(titles []*types.Title) {
 	sema := make(chan struct{}, flags.ParallelDownloads)
 
 	downloadImg := func(imgDir string, imgCon types.ImageContainer, url string) {
-		if exists, imgPath := imageExists(imgDir, url); exists {
+		if exists, imgPath := fsutil.ImageExists(imgDir, url); exists {
 			logf.LogErrorf(logf.LOG_WARNING, "Skipping existing file: %s", imgPath)
 			progressbar.UpdateProgressDisplay(titles, imgCon.IncrementSkipped)
 			return
@@ -56,14 +55,14 @@ func DownloadImages(titles []*types.Title) {
 		}(url)
 	}
 
-	outputDir := createOutputDir(flags.OutputDir)
+	outputDir := fsutil.CreateOutputDir(flags.OutputDir)
 
 	fmt.Println(":: Showing progress...")
 	progressbar.ShowProgress(titles)
 
 	/* For each title... */
 	for _, title := range titles {
-		titleDir := createTitleDir(outputDir, title.Name)
+		titleDir := fsutil.CreateTitleDir(outputDir, title.Name)
 		title.Start = time.Now()
 
 		/* Handle movies seperately, since they have no episodes. */
@@ -82,7 +81,7 @@ func DownloadImages(titles []*types.Title) {
 
 		/* For each episode... */
 		for _, episode := range title.Episodes {
-			episodeDir := createEpisodeDir(titleDir, episode.Name)
+			episodeDir := fsutil.CreateEpisodeDir(titleDir, episode.Name)
 
 			URLs := episode.Images.URLs()
 			episode.Start = time.Now()
@@ -99,81 +98,6 @@ func DownloadImages(titles []*types.Title) {
 	if flags.Async {
 		wg.Wait()
 	}
-}
-
-/*
-Sleeps for a minimum of `minDelay` milliseconds and a random amount
-of milliseconds ranging from 0 milliseconds (no random delay) to
-`randDelay` milliseconds. Returns the amount of time slept.
-
-In this way, `randDelay` acts as the maximum amount of random delay possible
-(in milliseconds).
-*/
-func jitterDelay(minDelay uint32, randDelay uint32) time.Duration {
-	d := time.Duration(minDelay) * time.Millisecond
-	r := time.Duration(0)
-	if randDelay > 0 {
-		r = time.Duration(rand.Intn(int(randDelay))) * time.Millisecond
-	}
-	jitter := d + r
-
-	time.Sleep(jitter)
-
-	return jitter
-}
-
-/*
-Returns the path to a newly created output directory at `dirname` to store the scraped images.
-This function checks whether the parent directories of `dirname` exist before creating the directory,
-if they do not, this will exit with code 1.
-
-Anime images will be saved to "./`dirname`/<Anime_Title_Name>/<Anime_Episode_Name>/".
-
-TV Series images will be saved to "./`dirname`/<TV_Title_Name>/<TV_Episode_Name>/".
-
-Movie images will be saved to "./`dirname`/<Movie_Name>/".
-*/
-func createOutputDir(dirname string) string {
-	/* Check (for a second time) that the parent directories still exist. */
-	if !cli.ParentDirsExist(dirname) {
-		fmt.Fprintf(os.Stderr,
-			"createOutputDir error: Couldn't find parent directories of `%s`\n"+
-				"Make sure the parent directories still exist at runtime.\n",
-			dirname)
-		os.Exit(1)
-	}
-
-	mkdirIfDNE(dirname)
-
-	return dirname
-}
-
-/*
-Creates a new directory for a title under the name `titleName` in the directory `outDir`.
-The `outDir` directory must exist.
-Returns the path to the newly created title directory.
-*/
-func createTitleDir(outDir string, titleName string) string {
-	sanitizedTitleName := sanitizeDirname(titleName)
-
-	titleDir := filepath.Join(outDir, sanitizedTitleName)
-	mkdirIfDNE(titleDir)
-
-	return titleDir
-}
-
-/*
-Creates a new directory for an episode under the name `episodeName` in the directory `titleDir`.
-The `titleDir` directory must exist.
-Returns the path to the newly created episode directory.
-*/
-func createEpisodeDir(titleDir string, episodeName string) string {
-	sanitizedEpisodeName := sanitizeDirname(episodeName)
-
-	episodeDir := filepath.Join(titleDir, sanitizedEpisodeName)
-	mkdirIfDNE(episodeDir)
-
-	return episodeDir
 }
 
 /*
@@ -243,38 +167,23 @@ func downloadImage(imgDir string, url string) bool {
 	return sent
 }
 
-/* Returns a safe directory name for directory creation on all platforms. */
-func sanitizeDirname(dirname string) string {
-	sanitizedDirname := strings.ReplaceAll(dirname, " ", "_")          // underscores are nicer than whitespaces :)
-	sanitizedDirname = strings.ReplaceAll(sanitizedDirname, "/", "-")  // avoid nested paths
-	sanitizedDirname = strings.ReplaceAll(sanitizedDirname, ":", "__") // remove illegal characters (Windows)
-
-	return sanitizedDirname
-}
-
 /*
-Creates directory `dirname`, if it does not already exist.
-If directory creation fails, prints an error and exits with code 1.
+Sleeps for a minimum of `minDelay` milliseconds and a random amount
+of milliseconds ranging from 0 milliseconds (no random delay) to
+`randDelay` milliseconds. Returns the amount of time slept.
+
+In this way, `randDelay` acts as the maximum amount of random delay possible
+(in milliseconds).
 */
-func mkdirIfDNE(dirname string) {
-	if _, err := os.Stat(dirname); os.IsNotExist(err) {
-		if err := os.Mkdir(dirname, os.ModePerm); err != nil {
-			log.Fatalf("mkdirIfDNE error: %v", err)
-		}
+func jitterDelay(minDelay uint32, randDelay uint32) time.Duration {
+	d := time.Duration(minDelay) * time.Millisecond
+	r := time.Duration(0)
+	if randDelay > 0 {
+		r = time.Duration(rand.Intn(int(randDelay))) * time.Millisecond
 	}
-}
+	jitter := d + r
 
-/*
-Returns whether the image at URL `url` exists in the directory `imgDir`,
-as well as the full image path that was checked.
-*/
-func imageExists(imgDir string, url string) (bool, string) {
-	imgFilename := path.Base(url)
-	imgPath := filepath.Join(imgDir, imgFilename)
+	time.Sleep(jitter)
 
-	if _, err := os.Stat(imgPath); err == nil {
-		return true, imgPath
-	}
-
-	return false, imgPath
+	return jitter
 }

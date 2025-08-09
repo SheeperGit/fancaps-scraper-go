@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+
+	"sheeper.com/fancaps-scraper-go/pkg/cli"
 )
 
 /* Enum for log severity. */
@@ -37,13 +39,14 @@ Appends errors to a log file, as defined by its severity `severity`, format `for
 arguments `args`. Errors are timestamped with nanosecond precision.
 */
 func LogErrorf(logSev LogSeverity, format string, args ...any) {
-	if cfg.noLog {
+	flags := cli.Flags()
+	if flags.NoLog {
 		return
 	}
 
 	setOnce.Do(func() {
 		fileTimestamp := time.Now().Format("2006-01-02_15-04-05.000000000") // Nanosecond precision.
-		LogDir := cfg.outputDir
+		LogDir := flags.OutputDir
 		Logfile = filepath.Join(LogDir, fmt.Sprintf("fsg_errors_%s.txt", fileTimestamp))
 
 		maxSeverityLen := 0

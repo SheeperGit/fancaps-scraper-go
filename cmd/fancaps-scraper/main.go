@@ -9,8 +9,14 @@ import (
 )
 
 func main() {
-	/* Get search URLs and parse flags. */
-	searchURLs, flags := cli.ParseCLI()
+	/* Parse flags. */
+	cli.ParseCLI()
+
+	/* Get parsed flags. */
+	flags := cli.Flags()
+
+	/* Get URLs to search through. */
+	searchURLs := scraper.GetSearchURLs(flags.Queries, flags.Categories)
 
 	/* Get titles matching user query. */
 	titles := scraper.GetTitles(searchURLs)
