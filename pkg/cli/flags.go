@@ -52,7 +52,7 @@ var defaultOutputDir = filepath.Join(".", "output") // Default output directory.
 func ParseCLI() {
 	var (
 		queries           []string
-		categories        string
+		categories        []string
 		outputDir         string
 		parallelDownloads uint8
 		minDelay          uint32
@@ -81,7 +81,7 @@ func ParseCLI() {
 
 	/* Flag Definitions. */
 	rootCmd.Flags().StringSliceVarP(&queries, "query", "q", []string{}, "Search query terms")
-	rootCmd.Flags().StringVarP(&categories, "categories", "c", "", "Categories to search. Format: [anime,tv,movies|all] (comma-separated)")
+	rootCmd.Flags().StringSliceVarP(&categories, "categories", "c", []string{}, "Categories to search. Format: [anime,tv,movies|all] (comma-separated)")
 	rootCmd.Flags().StringVarP(&outputDir, "output-dir", "o", defaultOutputDir, "Output directory for images. (Parent directories must exist)")
 	rootCmd.Flags().Uint8VarP(&parallelDownloads, "parallel-downloads", "p", defaultParallelDownloads, "Maximum amount of image downloads to request in parallel.")
 	rootCmd.Flags().Uint32Var(&minDelay, "min-delay", defaultMinDelay, "Minimum delay applied after subsequent image requests. (In milliseconds)")

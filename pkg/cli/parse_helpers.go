@@ -47,22 +47,19 @@ and prompts the user for categories with a menu otherwise.
 
 If `categories` contains an unknown category, this function exists with status code 1.
 */
-func parseCategories(categories string) []types.Category {
+func parseCategories(categories []string) []types.Category {
 	cats := []types.Category{}
-	if categories != "" {
-		sanitizedInput := strings.ToLower(categories)
-		parts := strings.Split(sanitizedInput, ",")
 
+	if len(categories) != 0 { // Parse provided categories.
 		categoryMap := map[string]types.Category{
 			"anime":  types.CategoryAnime,
 			"tv":     types.CategoryTV,
 			"movies": types.CategoryMovie,
 		}
-
 		seen := map[types.Category]bool{}
 
-		for _, part := range parts {
-			part = strings.TrimSpace(part)
+		for _, part := range categories {
+			part = strings.ToLower(part)
 			if part == "all" {
 				for _, cat := range categoryMap {
 					if !seen[cat] {
@@ -81,10 +78,7 @@ func parseCategories(categories string) []types.Category {
 				os.Exit(1)
 			}
 		}
-	}
-
-	/* If no categories flags specified, prompt user for categories with a Category Menu. */
-	if len(cats) == 0 {
+	} else { // No categories specified, prompt user for categories with a Category Menu.
 		selectedMenuCategories := menu.LaunchCategoriesMenu()
 		for cat := range selectedMenuCategories {
 			cats = append(cats, cat)
