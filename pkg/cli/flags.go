@@ -81,22 +81,25 @@ func ParseCLI() {
 	}
 
 	/* Flag Definitions. */
-	rootCmd.Flags().StringSliceVarP(&queries, "query", "q", []string{}, "Search query terms")
+	rootCmd.Flags().StringSliceVarP(&queries, "query", "q", []string{}, "Search query terms.")
 	rootCmd.Flags().StringSliceVarP(&categories, "categories", "c", []string{}, "Categories to search. Format: [anime,tv,movies|all] (comma-separated)")
 	rootCmd.Flags().StringVarP(&outputDir, "output-dir", "o", defaultOutputDir, "Output directory for images. (Parent directories must exist)")
 	rootCmd.Flags().Uint8VarP(&parallelDownloads, "parallel-downloads", "p", defaultParallelDownloads, "Maximum amount of image downloads to request in parallel.")
 	rootCmd.Flags().DurationVar(&minDelay, "min-delay", defaultMinDelay, "Minimum delay applied after subsequent image requests. (Non-negative)")
 	rootCmd.Flags().DurationVar(&randDelay, "random-delay", defaultRandDelay, "Maximum random delay applied after subsequent image requests. (Non-negative)")
-	rootCmd.Flags().BoolVar(&async, "async", true, "Enable asynchronous requests")
-	rootCmd.Flags().BoolVar(&debug, "debug", false, "Enable debug mode")
-	rootCmd.Flags().BoolVar(&nolog, "no-log", false, "Disable logging")
+	rootCmd.Flags().BoolVar(&async, "async", true, "Enable asynchronous requests.")
+	rootCmd.Flags().BoolVar(&debug, "debug", false, "Enable debug mode.")
+	rootCmd.Flags().BoolVar(&nolog, "no-log", false, "Disable logging.")
 
 	/* "Override" default help. */
-	rootCmd.Flags().BoolP("help", "h", false, "Display this help and exit")
+	rootCmd.Flags().BoolP("help", "h", false, "Display this help and exit.")
 	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		cmd.Root().Usage()
 		os.Exit(0)
 	})
+
+	/* Show flags in the order they were defined. */
+	rootCmd.Flags().SortFlags = false
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
