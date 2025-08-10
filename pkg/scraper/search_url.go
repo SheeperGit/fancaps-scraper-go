@@ -14,6 +14,13 @@ import (
 	"sheeper.com/fancaps-scraper-go/pkg/ui/prompt"
 )
 
+/* Rendered help text for a search query prompt. */
+var queryHelpPrompt = strings.Join([]string{
+	ui.HelpStyle.Render("Type the name of a movie, TV series, or anime you'd like to search for."),
+	ui.HelpStyle.Render(`(e.g., "Predator", "Family Guy", "Hunter x Hunter", etc.)`),
+	ui.HelpStyle.Render("Tip: You can enter just part of a title to search."),
+}, "\n")
+
 /*
 Returns a list of search URLs to be scraped based on queries `queries` and categories `categories`.
 
@@ -24,7 +31,7 @@ func GetSearchURLs(queries []string, categories []types.Category) []string {
 	searchURLs := []string{}
 	if len(queries) == 0 { // Prompt and validate search URLs incrementally.
 		for len(queries) == 0 || prompt.YesNoPrompt("Enter another query? [y/N]: ", "") {
-			query := prompt.TextPrompt("Enter Search Query: ", prompt.QueryHelpPrompt)
+			query := prompt.TextPrompt("Enter Search Query: ", queryHelpPrompt)
 			if strings.TrimSpace(query) == "" {
 				fmt.Fprintln(os.Stderr, ui.ErrStyle.Render("search query cannot be empty.\n\n"))
 				continue
