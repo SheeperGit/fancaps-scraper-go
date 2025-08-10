@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/spf13/cobra"
 	"sheeper.com/fancaps-scraper-go/pkg/types"
@@ -15,8 +16,8 @@ type CLIFlags struct {
 	Categories        []types.Category // Selected categories to search using `Query`.
 	OutputDir         string           // The directory to output images.
 	ParallelDownloads uint8            // Maximum amount of image downloads to make in parallel.
-	MinDelay          uint32           // Minimum delay applied after subsequent image requests. (In milliseconds)
-	RandDelay         uint32           // Maximum random delay applied after subsequent image requests. (In milliseconds)
+	MinDelay          time.Duration    // Minimum delay applied after subsequent image requests. (Non-negative)
+	RandDelay         time.Duration    // Maximum random delay applied after subsequent image requests. (Non-negative)
 	Async             bool             // If true, enable asynchronous network requests.
 	Debug             bool             // If true, print useful debugging messages.
 	NoLog             bool             // If true, disable logging.
@@ -41,9 +42,9 @@ const (
   # Search for "Friends" tv series titles only, with asynchronous network requests explicitly disabled.
   fancaps-scraper -q Friends --categories tv --async=false`
 
-	defaultParallelDownloads uint8  = 10   // Default maximum amount of titles or episodes to download images from in parallel.
-	defaultMinDelay          uint32 = 1000 // Default minimum delay (in milliseconds) after every new image download request.
-	defaultRandDelay         uint32 = 5000 // Default maximum random delay (in milliseconds) after every new image download request.
+	defaultParallelDownloads uint8         = 10              // Default maximum amount of titles or episodes to download images from in parallel.
+	defaultMinDelay          time.Duration = 1 * time.Second // Default minimum delay after every new image download request.
+	defaultRandDelay         time.Duration = 5 * time.Second // Default maximum random delay after every new image download request.
 )
 
 var defaultOutputDir = filepath.Join(".", "output") // Default output directory.
@@ -55,8 +56,8 @@ func ParseCLI() {
 		categories        []string
 		outputDir         string
 		parallelDownloads uint8
-		minDelay          uint32
-		randDelay         uint32
+		minDelay          time.Duration
+		randDelay         time.Duration
 		async             bool
 		debug             bool
 		nolog             bool
@@ -71,8 +72,8 @@ func ParseCLI() {
 			flags.Categories = parseCategories(categories)
 			flags.OutputDir = validateOutputDir(outputDir)
 			flags.ParallelDownloads = validateParallelDownloads(parallelDownloads)
-			flags.MinDelay = minDelay
-			flags.RandDelay = randDelay
+			flags.MinDelay = validateDelay(minDelay)
+			flags.RandDelay = validateDelay(randDelay)
 			flags.Async = async
 			flags.Debug = debug
 			flags.NoLog = nolog
@@ -84,8 +85,8 @@ func ParseCLI() {
 	rootCmd.Flags().StringSliceVarP(&categories, "categories", "c", []string{}, "Categories to search. Format: [anime,tv,movies|all] (comma-separated)")
 	rootCmd.Flags().StringVarP(&outputDir, "output-dir", "o", defaultOutputDir, "Output directory for images. (Parent directories must exist)")
 	rootCmd.Flags().Uint8VarP(&parallelDownloads, "parallel-downloads", "p", defaultParallelDownloads, "Maximum amount of image downloads to request in parallel.")
-	rootCmd.Flags().Uint32Var(&minDelay, "min-delay", defaultMinDelay, "Minimum delay applied after subsequent image requests. (In milliseconds)")
-	rootCmd.Flags().Uint32Var(&randDelay, "random-delay", defaultRandDelay, "Maximum random delay applied after subsequent image requests. (In milliseconds)")
+	rootCmd.Flags().DurationVar(&minDelay, "min-delay", defaultMinDelay, "Minimum delay applied after subsequent image requests. (Non-negative)")
+	rootCmd.Flags().DurationVar(&randDelay, "random-delay", defaultRandDelay, "Maximum random delay applied after subsequent image requests. (Non-negative)")
 	rootCmd.Flags().BoolVar(&async, "async", true, "Enable asynchronous requests")
 	rootCmd.Flags().BoolVar(&debug, "debug", false, "Enable debug mode")
 	rootCmd.Flags().BoolVar(&nolog, "no-log", false, "Disable logging")

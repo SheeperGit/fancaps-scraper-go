@@ -168,20 +168,18 @@ func downloadImage(imgDir string, url string) bool {
 }
 
 /*
-Sleeps for a minimum of `minDelay` milliseconds and a random amount
-of milliseconds ranging from 0 milliseconds (no random delay) to
-`randDelay` milliseconds. Returns the amount of time slept.
+Sleeps for a minimum of `minDelay` time and a random amount
+ranging from 0 (no random delay) to `randDelay` time.
+Returns the amount of time slept.
 
-In this way, `randDelay` acts as the maximum amount of random delay possible
-(in milliseconds).
+In this way, `randDelay` acts as the maximum amount of random delay possible.
 */
-func jitterDelay(minDelay uint32, randDelay uint32) time.Duration {
-	d := time.Duration(minDelay) * time.Millisecond
-	r := time.Duration(0)
+func jitterDelay(minDelay, randDelay time.Duration) time.Duration {
+	var r time.Duration
 	if randDelay > 0 {
-		r = time.Duration(rand.Intn(int(randDelay))) * time.Millisecond
+		r = time.Duration(rand.Int63n(int64(randDelay)))
 	}
-	jitter := d + r
+	jitter := minDelay + r
 
 	time.Sleep(jitter)
 
