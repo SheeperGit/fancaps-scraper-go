@@ -4,14 +4,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
-	"strings"
 
 	"github.com/spf13/cobra"
-	"sheeper.com/fancaps-scraper-go/pkg/fsutil"
 	"sheeper.com/fancaps-scraper-go/pkg/types"
-	"sheeper.com/fancaps-scraper-go/pkg/ui"
-	"sheeper.com/fancaps-scraper-go/pkg/ui/menu"
 )
 
 /* Available CLI Flags. */
@@ -72,70 +67,10 @@ func ParseCLI() {
 		Short:   "Scrape images from fancaps.net using a CLI interface",
 		Example: exampleUsage,
 		Run: func(cmd *cobra.Command, args []string) {
-			/* Check that the parent directories exist. */
-			if !fsutil.ParentDirsExist(outputDir) {
-				fmt.Fprintf(os.Stderr,
-					ui.ErrStyle.Render("couldn't find parent directories of `%s`")+"\n"+
-						ui.ErrStyle.Render("make sure the parent directories exists.")+"\n",
-					outputDir)
-				os.Exit(1)
-			}
-			flags.OutputDir = outputDir
-
-			/* Check that parallel downloads is non-zero. */
-			if parallelDownloads == 0 {
-				fmt.Fprintln(os.Stderr, ui.ErrStyle.Render("parallel downloads must be set stricly positive."))
-				os.Exit(1)
-			}
-			flags.ParallelDownloads = parallelDownloads
-
-			/* Category Parsing. */
-			if categories != "" {
-				sanitizedInput := strings.ToLower(categories)
-				parts := strings.Split(sanitizedInput, ",")
-
-				categoryMap := map[string]types.Category{
-					"anime":  types.CategoryAnime,
-					"tv":     types.CategoryTV,
-					"movies": types.CategoryMovie,
-				}
-
-				seen := map[types.Category]bool{}
-
-				for _, part := range parts {
-					part = strings.TrimSpace(part)
-					if part == "all" {
-						for _, cat := range categoryMap {
-							if !seen[cat] {
-								flags.Categories = append(flags.Categories, cat)
-								seen[cat] = true
-							}
-						}
-						break
-					}
-
-					if cat, ok := categoryMap[part]; ok && !seen[cat] {
-						flags.Categories = append(flags.Categories, cat)
-						seen[cat] = true
-					} else if !ok {
-						fmt.Fprintf(os.Stderr, "unknown category `%s`. valid options are: anime, tv, movies, all\n", part)
-						os.Exit(1)
-					}
-				}
-			}
-
-			/* If no categories flags specified, open Category Menu. */
-			if len(flags.Categories) == 0 {
-				selectedMenuCategories := menu.LaunchCategoriesMenu()
-				for cat := range selectedMenuCategories {
-					flags.Categories = append(flags.Categories, cat)
-				}
-			}
-
-			/* Sort according to Category enum order. */
-			slices.Sort(flags.Categories)
-
 			flags.Queries = queries
+			flags.Categories = parseCategories(categories)
+			flags.OutputDir = validateOutputDir(outputDir)
+			flags.ParallelDownloads = validateParallelDownloads(parallelDownloads)
 			flags.MinDelay = minDelay
 			flags.RandDelay = randDelay
 			flags.Async = async
