@@ -33,13 +33,13 @@ func GetSearchURLs(queries []string, categories []types.Category) []string {
 		for len(queries) == 0 || prompt.YesNoPrompt("Enter another query? [y/N]: ", "") {
 			query := prompt.TextPrompt("Enter Search Query: ", queryHelpPrompt)
 			if strings.TrimSpace(query) == "" {
-				fmt.Fprintln(os.Stderr, ui.ErrStyle.Render("search query cannot be empty.\n\n"))
+				fmt.Fprintln(os.Stderr, ui.ErrStyle.Render("search query cannot be empty.")+"\n")
 				continue
 			}
 
 			url := BuildQueryURL(query, categories)
 			if !titleExists(url) {
-				fmt.Fprintf(os.Stderr, ui.ErrStyle.Render("no titles found for query `%s`.")+"\n\n", query)
+				fmt.Fprintf(os.Stderr, ui.ErrStyle.Render("no titles found for query `%s`.")+"\n", query)
 				continue
 			}
 			fmt.Printf(ui.SuccessStyle.Render("Found titles for query: `%s`")+"\n", query)
