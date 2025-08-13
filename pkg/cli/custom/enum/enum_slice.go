@@ -18,8 +18,11 @@ type enumSliceValue[T cmp.Ordered] struct {
 	validEnums string       // Valid comma-separated enums.
 }
 
-/* Returns a new enum slice `e`. */
-func newEnumSliceValue[T cmp.Ordered](value *[]T, enumToVal map[string]T) *enumSliceValue[T] {
+/*
+Returns a new enum slice.
+Panics if `T` contains an element not present in the values of `enumToVal`.
+*/
+func newEnumSliceValue[T cmp.Ordered](value []T, p *[]T, enumToVal map[string]T) *enumSliceValue[T] {
 	/* Returns a reverse map of a map from enum to value `m`. */
 	valToEnum := func(m map[string]T) map[T]string {
 		reverse := make(map[T]string, len(m))
@@ -43,8 +46,17 @@ func newEnumSliceValue[T cmp.Ordered](value *[]T, enumToVal map[string]T) *enumS
 		return strings.Join(names, ", ")
 	}()
 
+	/* Validate default values. */
+	for _, v := range value {
+		if _, ok := valToEnum[v]; !ok {
+			panic(fmt.Sprintf("default value %v not present in enums (valid values: %s)", v, validEnums))
+		}
+	}
+
+	*p = value
+
 	return &enumSliceValue[T]{
-		value:      value,
+		value:      p,
 		enumToVal:  enumToVal,
 		valToEnum:  valToEnum,
 		validEnums: validEnums,
@@ -94,13 +106,12 @@ func (e *enumSliceValue[T]) String() string {
 
 /* Returns a string representing the type of enum slice `e`. */
 func (e *enumSliceValue[T]) Type() string {
-	return "enums"
+	return "strings"
 }
 
 /* Registers an enum slice flag. */
 func EnumSliceVarP[T cmp.Ordered](flagSet *pflag.FlagSet, p *[]T, name, shorthand string, value []T, enumToVal map[string]T, usage string) {
-	*p = value
-	ev := newEnumSliceValue(p, enumToVal)
+	ev := newEnumSliceValue(value, p, enumToVal)
 
 	flagSet.VarP(ev, name, shorthand, fmt.Sprintf("%s (allowed: %s)", usage, ev.validEnums))
 }

@@ -8,8 +8,19 @@ import (
 )
 
 /* A directory with existing parent directories. */
-type createDirValue struct {
-	value *string
+type createDirValue string
+
+/*
+Returns a new directory value.
+Panics if `val` is does not have existing parent directories.
+*/
+func newCreateDirValue(val string, p *string) *createDirValue {
+	if !fsutil.ParentDirsExist(val) {
+		panic(fmt.Sprintf("default value for createDir must have existing parent directories (got: %v)", val))
+	}
+
+	*p = val
+	return (*createDirValue)(p)
 }
 
 /*
@@ -18,30 +29,28 @@ Returns any errors encountered.
 */
 func (d *createDirValue) Set(s string) error {
 	if !fsutil.ParentDirsExist(s) {
-		return fmt.Errorf("invalid output directory %s; make sure the parent directories exists", s)
+		return fmt.Errorf("invalid output directory %s; make sure the parent directories exist", s)
 	}
-	*d.value = s
+	*d = createDirValue(s)
 
 	return nil
 }
 
 /* Returns the filepath of the directory value `d`. */
 func (d *createDirValue) String() string {
-	if d.value == nil {
+	if d == nil {
 		return ""
 	}
 
-	return *d.value
+	return string(*d)
 }
 
 /* Returns a string representing the type of directory value `d`. */
 func (d *createDirValue) Type() string {
-	return "directory"
+	return "string"
 }
 
 /* Registers a create directory flag. */
 func CreateDirVarP(flagSet *pflag.FlagSet, p *string, name, shorthand, value, usage string) {
-	*p = value
-
-	flagSet.VarP(&createDirValue{value: p}, name, shorthand, usage)
+	flagSet.VarP(newCreateDirValue(value, p), name, shorthand, usage)
 }
