@@ -48,11 +48,18 @@ const (
 	defaultRandDelay         time.Duration = 5 * time.Second // Default maximum random delay after every new image download request.
 )
 
-var defaultCategories = []types.Category{
-	types.CategoryAnime,
-	types.CategoryTV,
-	types.CategoryMovie,
-}
+var (
+	defaultCategories = []types.Category{
+		types.CategoryAnime,
+		types.CategoryTV,
+		types.CategoryMovie,
+	} // Default categories to search.
+	enumToCategory = map[string]types.Category{
+		"anime":  types.CategoryAnime,
+		"tv":     types.CategoryTV,
+		"movies": types.CategoryMovie,
+	} // A map from custom enums to categories.
+)
 
 var defaultOutputDir = filepath.Join(".", "output") // Default output directory.
 
@@ -89,7 +96,7 @@ func ParseCLI() {
 
 	/* Flag Definitions. */
 	rootCmd.Flags().StringSliceVarP(&queries, "query", "q", []string{}, "Search query terms.")
-	enum.CategorySliceVarP(rootCmd.Flags(), &categories, "categories", "c", defaultCategories, "Categories to search.")
+	enum.EnumSliceVarP(rootCmd.Flags(), &categories, "categories", "c", defaultCategories, enumToCategory, "Categories to search.")
 	rootCmd.Flags().StringVarP(&outputDir, "output-dir", "o", defaultOutputDir, "Output directory for images. (Parent directories must exist)")
 	rootCmd.Flags().Uint8VarP(&parallelDownloads, "parallel-downloads", "p", defaultParallelDownloads, "Maximum amount of image downloads to request in parallel.")
 	rootCmd.Flags().DurationVar(&minDelay, "min-delay", defaultMinDelay, "Minimum delay applied after subsequent image requests. (Non-negative)")
