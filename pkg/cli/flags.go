@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 	enum "sheeper.com/fancaps-scraper-go/pkg/cli/custom/enum"
+	fs "sheeper.com/fancaps-scraper-go/pkg/cli/custom/fs"
 	"sheeper.com/fancaps-scraper-go/pkg/types"
 )
 
@@ -84,7 +85,7 @@ func ParseCLI() {
 		Run: func(cmd *cobra.Command, args []string) {
 			flags.Queries = queries
 			flags.Categories = categories
-			flags.OutputDir = validateOutputDir(outputDir)
+			flags.OutputDir = outputDir
 			flags.ParallelDownloads = validateParallelDownloads(parallelDownloads)
 			flags.MinDelay = validateDelay(minDelay)
 			flags.RandDelay = validateDelay(randDelay)
@@ -97,7 +98,7 @@ func ParseCLI() {
 	/* Flag Definitions. */
 	rootCmd.Flags().StringSliceVarP(&queries, "query", "q", []string{}, "Search query terms.")
 	enum.EnumSliceVarP(rootCmd.Flags(), &categories, "categories", "c", defaultCategories, enumToCategory, "Categories to search.")
-	rootCmd.Flags().StringVarP(&outputDir, "output-dir", "o", defaultOutputDir, "Output directory for images. (Parent directories must exist)")
+	fs.CreateDirVarP(rootCmd.Flags(), &outputDir, "output-dir", "o", defaultOutputDir, "Output directory for images. (Parent directories must exist)")
 	rootCmd.Flags().Uint8VarP(&parallelDownloads, "parallel-downloads", "p", defaultParallelDownloads, "Maximum amount of image downloads to request in parallel.")
 	rootCmd.Flags().DurationVar(&minDelay, "min-delay", defaultMinDelay, "Minimum delay applied after subsequent image requests. (Non-negative)")
 	rootCmd.Flags().DurationVar(&randDelay, "random-delay", defaultRandDelay, "Maximum random delay applied after subsequent image requests. (Non-negative)")

@@ -5,25 +5,8 @@ import (
 	"os"
 	"time"
 
-	"sheeper.com/fancaps-scraper-go/pkg/fsutil"
 	"sheeper.com/fancaps-scraper-go/pkg/ui"
 )
-
-/*
-Returns the output directory `outputDir` if its parent directories exist,
-and exits with status code 1 otherwise.
-*/
-func validateOutputDir(outputDir string) string {
-	if !fsutil.ParentDirsExist(outputDir) {
-		fmt.Fprintf(os.Stderr,
-			ui.ErrStyle.Render("couldn't find parent directories of `%s`")+"\n"+
-				ui.ErrStyle.Render("make sure the parent directories exists.")+"\n",
-			outputDir)
-		os.Exit(1)
-	}
-
-	return outputDir
-}
 
 /*
 Returns the amount of parallel downloads to make if it is strictly positive,
