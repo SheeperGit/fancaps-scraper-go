@@ -8,14 +8,18 @@ import (
 )
 
 const (
-	exampleUsage = `  # Show this message and exit.
+	exampleUsage = `Usage:
+	fancaps-scraper-go [OPTIONS]
+
+Examples:
+	# Show this message and exit.
   fancaps-scraper --help
 
   # Search for "Naruto" with anime and tv series titles only.
   fancaps-scraper --query Naruto --categories anime,tv
 
-  # Search for "The Office" (with short flags) in all categories. (Notice also the single quotes to signify "The Office" as one argument.)
-  fancaps-scraper -q 'The Office' -c all
+  # Search for "The Office" (with short flags). (Notice also the single quotes to signify "The Office" as one argument.)
+  fancaps-scraper -q 'The Office'
 
   # Search for "Inception" movie titles only, with debug enabled.
   fancaps-scraper -q Inception --categories movies --debug

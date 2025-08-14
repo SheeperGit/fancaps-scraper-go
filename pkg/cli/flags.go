@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	enumflag "sheeper.com/fancaps-scraper-go/pkg/cli/custom/enum"
 	fsflag "sheeper.com/fancaps-scraper-go/pkg/cli/custom/fs"
 	numflag "sheeper.com/fancaps-scraper-go/pkg/cli/custom/number"
@@ -41,48 +41,58 @@ func ParseCLI() {
 		nolog             bool
 	)
 
-	rootCmd := &cobra.Command{
-		Use:     "fancaps-scraper",
-		Short:   "Scrape images from fancaps.net using a CLI interface",
-		Example: exampleUsage,
-		Run: func(cmd *cobra.Command, args []string) {
-			flags.Queries = queries
-			flags.Categories = categories
-			flags.OutputDir = outputDir
-			flags.ParallelDownloads = parallelDownloads
-			flags.MinDelay = minDelay
-			flags.RandDelay = randDelay
-			flags.Async = async
-			flags.Debug = debug
-			flags.NoLog = nolog
-		},
+	f := pflag.NewFlagSet("fancaps-scraper", pflag.ContinueOnError)
+
+	/* Show flags in the order they were defined. */
+	f.SortFlags = false
+
+	/* Define how usage is shown. */
+	f.Usage = func() {
+		if exampleUsage != "" {
+			fmt.Fprintln(f.Output(), exampleUsage)
+			fmt.Fprintln(f.Output(), "")
+		}
+		fmt.Fprintln(f.Output(), "Flags:")
+		f.PrintDefaults()
 	}
 
 	/* Flag Definitions. */
-	rootCmd.Flags().StringSliceVarP(&queries, "query", "q", []string{}, "Search query terms.")
-	enumflag.EnumSliceVarP(rootCmd.Flags(), &categories, "categories", "c", defaultCategories, enumToCategory, "Categories to search.")
-	fsflag.CreateDirVarP(rootCmd.Flags(), &outputDir, "output-dir", "o", defaultOutputDir, "Output directory for images.")
-	numflag.Puint8VarP(rootCmd.Flags(), &parallelDownloads, "parallel-downloads", "p", defaultParallelDownloads, "Maximum amount of image downloads to request in parallel.")
-	numflag.NnDurationVar(rootCmd.Flags(), &minDelay, "min-delay", defaultMinDelay, "Minimum delay applied after subsequent image requests.")
-	numflag.NnDurationVar(rootCmd.Flags(), &randDelay, "random-delay", defaultRandDelay, "Maximum random delay applied after subsequent image requests.")
-	rootCmd.Flags().BoolVar(&async, "async", true, "Enable asynchronous requests.")
-	rootCmd.Flags().BoolVar(&debug, "debug", false, "Enable debug mode.")
-	rootCmd.Flags().BoolVar(&nolog, "no-log", false, "Disable logging.")
+	f.StringSliceVarP(&queries, "query", "q", []string{}, "Search query terms.")
+	enumflag.EnumSliceVarP(f, &categories, "categories", "c", defaultCategories, enumToCategory, "Categories to search.")
+	fsflag.CreateDirVarP(f, &outputDir, "output-dir", "o", defaultOutputDir, "Output directory for images.")
+	numflag.Puint8VarP(f, &parallelDownloads, "parallel-downloads", "p", defaultParallelDownloads, "Maximum amount of image downloads to request in parallel.")
+	numflag.NnDurationVar(f, &minDelay, "min-delay", defaultMinDelay, "Minimum delay applied after subsequent image requests.")
+	numflag.NnDurationVar(f, &randDelay, "random-delay", defaultRandDelay, "Maximum random delay applied after subsequent image requests.")
+	f.BoolVar(&async, "async", true, "Enable asynchronous requests.")
+	f.BoolVar(&debug, "debug", false, "Enable debug mode.")
+	f.BoolVar(&nolog, "no-log", false, "Disable logging.")
 
-	/* "Override" default help. */
-	rootCmd.Flags().BoolP("help", "h", false, "Display this help and exit.")
-	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
-		cmd.Root().Usage()
-		os.Exit(0)
-	})
+	/* Custom help. */
+	var help bool
+	f.BoolVarP(&help, "help", "h", false, "Display this help and exit.")
 
-	/* Show flags in the order they were defined. */
-	rootCmd.Flags().SortFlags = false
-
-	if err := rootCmd.Execute(); err != nil {
+	/* Parse args. */
+	if err := f.Parse(os.Args[1:]); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+
+	/* Show usage, if requested. */
+	if help {
+		f.Usage()
+		os.Exit(0)
+	}
+
+	/* Assign values. */
+	flags.Queries = queries
+	flags.Categories = categories
+	flags.OutputDir = outputDir
+	flags.ParallelDownloads = parallelDownloads
+	flags.MinDelay = minDelay
+	flags.RandDelay = randDelay
+	flags.Async = async
+	flags.Debug = debug
+	flags.NoLog = nolog
 }
 
 /* Returns a copy of the CLI flags. */
