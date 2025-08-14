@@ -8,8 +8,7 @@ import (
 )
 
 const (
-	exampleUsage = `
-  # Show this message and exit.
+	exampleUsage = `  # Show this message and exit.
   fancaps-scraper --help
 
   # Search for "Naruto" with anime and tv series titles only.
