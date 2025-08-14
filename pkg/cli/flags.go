@@ -88,8 +88,8 @@ func ParseCLI() {
 			flags.Categories = categories
 			flags.OutputDir = outputDir
 			flags.ParallelDownloads = parallelDownloads
-			flags.MinDelay = validateDelay(minDelay)
-			flags.RandDelay = validateDelay(randDelay)
+			flags.MinDelay = minDelay
+			flags.RandDelay = randDelay
 			flags.Async = async
 			flags.Debug = debug
 			flags.NoLog = nolog
@@ -99,10 +99,10 @@ func ParseCLI() {
 	/* Flag Definitions. */
 	rootCmd.Flags().StringSliceVarP(&queries, "query", "q", []string{}, "Search query terms.")
 	enumflag.EnumSliceVarP(rootCmd.Flags(), &categories, "categories", "c", defaultCategories, enumToCategory, "Categories to search.")
-	fsflag.CreateDirVarP(rootCmd.Flags(), &outputDir, "output-dir", "o", defaultOutputDir, "Output directory for images. (Parent directories must exist)")
+	fsflag.CreateDirVarP(rootCmd.Flags(), &outputDir, "output-dir", "o", defaultOutputDir, "Output directory for images.")
 	numflag.Puint8VarP(rootCmd.Flags(), &parallelDownloads, "parallel-downloads", "p", defaultParallelDownloads, "Maximum amount of image downloads to request in parallel.")
-	rootCmd.Flags().DurationVar(&minDelay, "min-delay", defaultMinDelay, "Minimum delay applied after subsequent image requests. (Non-negative)")
-	rootCmd.Flags().DurationVar(&randDelay, "random-delay", defaultRandDelay, "Maximum random delay applied after subsequent image requests. (Non-negative)")
+	numflag.NnDurationVar(rootCmd.Flags(), &minDelay, "min-delay", defaultMinDelay, "Minimum delay applied after subsequent image requests.")
+	numflag.NnDurationVar(rootCmd.Flags(), &randDelay, "random-delay", defaultRandDelay, "Maximum random delay applied after subsequent image requests.")
 	rootCmd.Flags().BoolVar(&async, "async", true, "Enable asynchronous requests.")
 	rootCmd.Flags().BoolVar(&debug, "debug", false, "Enable debug mode.")
 	rootCmd.Flags().BoolVar(&nolog, "no-log", false, "Disable logging.")

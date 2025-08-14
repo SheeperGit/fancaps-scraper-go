@@ -52,5 +52,5 @@ func (d *createDirValue) Type() string {
 
 /* Registers a create directory flag. */
 func CreateDirVarP(flagSet *pflag.FlagSet, p *string, name, shorthand, value, usage string) {
-	flagSet.VarP(newCreateDirValue(value, p), name, shorthand, usage)
+	flagSet.VarP(newCreateDirValue(value, p), name, shorthand, fmt.Sprintf("%s (parent directories must exist)", usage))
 }

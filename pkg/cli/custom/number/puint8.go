@@ -16,7 +16,7 @@ Panics if `val` is 0.
 */
 func newPuint8Value(val uint8, p *uint8) *puint8Value {
 	if val == 0 {
-		panic(fmt.Sprintf("default value for puint8 must be strictly positive (got: %v)", val))
+		panic(fmt.Sprintf("default value for puint8 must be strictly positive (got: %d)", val))
 	}
 
 	*p = val
@@ -29,12 +29,15 @@ Returns any errors encountered.
 */
 func (i *puint8Value) Set(s string) error {
 	v, err := strconv.ParseUint(s, 10, 8)
+	if err != nil {
+		return err
+	}
 	if v == 0 {
-		return fmt.Errorf("value must be strictly positive (1-255)")
+		return fmt.Errorf("invalid value %q; must be strictly positive (1-255)", s)
 	}
 	*i = puint8Value(v)
 
-	return err
+	return nil
 }
 
 /* Returns the string representation of the puint8 value `i`. */
