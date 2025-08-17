@@ -15,15 +15,35 @@ type Formatter interface {
 	ContentType() string                          // Content type.
 }
 
+/* Enum for formats. */
+type Format int
+
+const (
+	FormatJSON Format = iota // JSON format.
+	FormatCSV                // CSV format.
+	FormatYAML               // YAML format.
+)
+
+var FormatName = map[Format]string{
+	FormatJSON: jsonFmt.ContentType(),
+	FormatCSV:  csvFmt.ContentType(),
+	FormatYAML: yamlFmt.ContentType(),
+}
+
+/* Convert a format enumeration to its corresponding string representation. */
+func (fmt Format) String() string {
+	return FormatName[fmt]
+}
+
 /* Available formatters. */
 var formatters = []Formatter{
 	jsonFmt,
-	yamlFmt,
 	csvFmt,
+	yamlFmt,
 }
 
 /* Maps content type to its corresponding formatter. */
-var formatMap = func() map[string]Formatter {
+var ctToFormat = func() map[string]Formatter {
 	m := make(map[string]Formatter, len(formatters))
 	for _, f := range formatters {
 		m[f.ContentType()] = f
@@ -44,7 +64,7 @@ var contentTypes = func() string {
 
 /* Prints titles `titles` in the format of the content type `contentType`. */
 func OutputFormat(titles []*types.Title, contentType string) {
-	f, ok := formatMap[contentType]
+	f, ok := ctToFormat[contentType]
 	if !ok {
 		fmt.Fprintf(os.Stderr, ui.ErrStyle.Render("unknown content type `%s`")+"\n"+
 			ui.ErrStyle.Render("valid content types: ")+ui.HighlightStyle.Render("%s"),

@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"sheeper.com/fancaps-scraper-go/pkg/format"
 	"sheeper.com/fancaps-scraper-go/pkg/types"
 )
 
@@ -43,6 +44,13 @@ var (
 		"tv":     types.CategoryTV,
 		"movies": types.CategoryMovie,
 	} // A map from custom enums to categories.
+
+	defaultFormat = format.FormatJSON // Default format for printing title data.
+	enumToFormat  = map[string]format.Format{
+		"json": format.FormatJSON,
+		"csv":  format.FormatCSV,
+		"yaml": format.FormatYAML,
+	} // A map from custom enums to formats.
 
 	defaultOutputDir = filepath.Join(".", "output") // Default output directory.
 )

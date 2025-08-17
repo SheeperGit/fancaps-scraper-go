@@ -9,6 +9,7 @@ import (
 	enumflag "sheeper.com/fancaps-scraper-go/pkg/cli/custom/enum"
 	fsflag "sheeper.com/fancaps-scraper-go/pkg/cli/custom/fs"
 	numflag "sheeper.com/fancaps-scraper-go/pkg/cli/custom/number"
+	"sheeper.com/fancaps-scraper-go/pkg/format"
 	"sheeper.com/fancaps-scraper-go/pkg/types"
 )
 
@@ -23,6 +24,7 @@ type CLIFlags struct {
 	Async             bool             // If true, enable asynchronous network requests.
 	Debug             bool             // If true, print useful debugging messages.
 	NoLog             bool             // If true, disable logging.
+	DryRun            format.Format
 }
 
 var flags CLIFlags // User CLI flags.
@@ -39,6 +41,7 @@ func ParseCLI() {
 		async             bool
 		debug             bool
 		nolog             bool
+		dryRun            format.Format
 	)
 
 	f := pflag.NewFlagSet("fancaps-scraper", pflag.ContinueOnError)
@@ -66,6 +69,7 @@ func ParseCLI() {
 	f.BoolVar(&async, "async", true, "Enable asynchronous requests.")
 	f.BoolVar(&debug, "debug", false, "Enable debug mode.")
 	f.BoolVar(&nolog, "no-log", false, "Disable logging.")
+	enumflag.EnumOptVarP(f, &dryRun, "dry-run", "n", defaultFormat, enumToFormat, "Enable dry-run mode: no changes are made, results are printed in the chosen format.")
 
 	/* Custom help. */
 	var help bool
@@ -93,6 +97,7 @@ func ParseCLI() {
 	flags.Async = async
 	flags.Debug = debug
 	flags.NoLog = nolog
+	flags.DryRun = dryRun
 }
 
 /* Returns a copy of the CLI flags. */
