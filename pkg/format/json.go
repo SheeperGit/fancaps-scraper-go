@@ -6,6 +6,11 @@ import (
 	"sheeper.com/fancaps-scraper-go/pkg/types"
 )
 
+type JSONOutput struct {
+	Total  int         `json:"total"`
+	Titles []JSONTitle `json:"titles"`
+}
+
 /* A Title JSON object. */
 type JSONTitle struct {
 	Name     string        `json:"name"`
@@ -46,7 +51,12 @@ func (JSONFormatter) Format(titles []*types.Title) ([]byte, error) {
 		jsonTitles = append(jsonTitles, jsonTitle)
 	}
 
-	return json.MarshalIndent(jsonTitles, "", "  ")
+	output := JSONOutput{
+		Total:  len(jsonTitles),
+		Titles: jsonTitles,
+	}
+
+	return json.MarshalIndent(output, "", "  ")
 }
 
 /* Returns the content type of the JSON formatter. */

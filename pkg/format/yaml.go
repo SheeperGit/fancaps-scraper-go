@@ -5,18 +5,23 @@ import (
 	"sheeper.com/fancaps-scraper-go/pkg/types"
 )
 
+type YAMLOutput struct {
+	Total  int         `yaml:"total"`
+	Titles []YAMLTitle `yaml:"titles"`
+}
+
 type YAMLTitle struct {
 	Name     string        `yaml:"name"`
 	Category string        `yaml:"category"`
 	Url      string        `yaml:"url"`
 	Episodes []YAMLEpisode `yaml:"episodes"`
-	Images   []string      `yaml:"images"`
+	Images   []string      `yaml:"images,omitempty"`
 }
 
 type YAMLEpisode struct {
 	Name   string   `yaml:"name"`
 	Url    string   `yaml:"url"`
-	Images []string `yaml:"images"`
+	Images []string `yaml:"images,omitempty"`
 }
 
 type YAMLFormatter struct{}
@@ -43,7 +48,12 @@ func (YAMLFormatter) Format(titles []*types.Title) ([]byte, error) {
 		yamlTitles = append(yamlTitles, yamlTitle)
 	}
 
-	return yaml.Marshal(yamlTitles)
+	output := YAMLOutput{
+		Total:  len(yamlTitles),
+		Titles: yamlTitles,
+	}
+
+	return yaml.Marshal(output)
 }
 
 /* Returns the content type of the YAML formatter. */

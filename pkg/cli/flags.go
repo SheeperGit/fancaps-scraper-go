@@ -101,6 +101,7 @@ func ParseCLI() {
 	flags.Debug = debug
 	flags.NoLog = nolog
 	flags.DryRun = dryRun
+	flags.Format = format
 }
 
 /* Returns a copy of the CLI flags. */
