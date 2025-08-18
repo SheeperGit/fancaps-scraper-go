@@ -72,7 +72,7 @@ func ParseCLI() {
 	f.BoolVar(&debug, "debug", false, "Enable debug mode.")
 	f.BoolVar(&nolog, "no-log", false, "Disable logging.")
 	f.BoolVarP(&dryRun, "dry-run", "n", false, "Enable dry-run mode: no changes are made, results are printed in the chosen format.")
-	enumflag.EnumVar(f, &format, "format", defaultFormat, enumToFormat, "Output format.")
+	enumflag.EnumVar(f, &format, "format", defaultFormat, enumToFormat, "Output format. (Used in dry-run mode only.)")
 
 	/* Custom help. */
 	var help bool

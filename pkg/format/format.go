@@ -19,12 +19,14 @@ type Formatter interface {
 type Format int
 
 const (
-	FormatJSON Format = iota // JSON format.
+	FormatDEF  Format = iota // Default format.
+	FormatJSON               // JSON format.
 	FormatCSV                // CSV format.
 	FormatYAML               // YAML format.
 )
 
 var FormatName = map[Format]string{
+	FormatDEF:  defFmt.ContentType(),
 	FormatJSON: jsonFmt.ContentType(),
 	FormatCSV:  csvFmt.ContentType(),
 	FormatYAML: yamlFmt.ContentType(),
@@ -37,6 +39,7 @@ func (fmt Format) String() string {
 
 /* Available formatters. */
 var formatters = []Formatter{
+	defFmt,
 	jsonFmt,
 	csvFmt,
 	yamlFmt,
