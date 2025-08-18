@@ -14,9 +14,9 @@ var csvFmt = CSVFormatter{}
 var schema = []string{
 	"Title Name",
 	"Category",
-	"Title Link",
+	"Title URL",
 	"Episode Name",
-	"Episode Link",
+	"Episode URL",
 	"Image URL",
 }
 
@@ -32,7 +32,7 @@ func (CSVFormatter) Format(titles []*types.Title) ([]byte, error) {
 	for _, t := range titles {
 		if t.Category == types.CategoryMovie { // Handle movies seperately, since they have no episodes.
 			for _, img := range t.Images.URLs() {
-				row := []string{t.Name, t.Category.String(), t.Link, "", "", img}
+				row := []string{t.Name, t.Category.String(), t.Url, "", "", img}
 				if err := w.Write(row); err != nil {
 					return nil, err
 				}
@@ -40,7 +40,7 @@ func (CSVFormatter) Format(titles []*types.Title) ([]byte, error) {
 		} else {
 			for _, ep := range t.Episodes {
 				for _, img := range ep.Images.URLs() {
-					row := []string{t.Name, t.Category.String(), t.Link, ep.Name, ep.Link, img}
+					row := []string{t.Name, t.Category.String(), t.Url, ep.Name, ep.Url, img}
 					if err := w.Write(row); err != nil {
 						return nil, err
 					}

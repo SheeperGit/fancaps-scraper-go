@@ -8,14 +8,14 @@ import (
 type YAMLTitle struct {
 	Name     string        `yaml:"name"`
 	Category string        `yaml:"category"`
-	Link     string        `yaml:"link"`
+	Url      string        `yaml:"url"`
 	Episodes []YAMLEpisode `yaml:"episodes"`
 	Images   []string      `yaml:"images"`
 }
 
 type YAMLEpisode struct {
 	Name   string   `yaml:"name"`
-	Link   string   `yaml:"link"`
+	Url    string   `yaml:"url"`
 	Images []string `yaml:"images"`
 }
 
@@ -30,13 +30,13 @@ func (YAMLFormatter) Format(titles []*types.Title) ([]byte, error) {
 		yamlTitle := YAMLTitle{
 			Name:     t.Name,
 			Category: t.Category.String(),
-			Link:     t.Link,
+			Url:      t.Url,
 			Images:   t.Images.URLs(),
 		}
 		for _, ep := range t.Episodes {
 			yamlTitle.Episodes = append(yamlTitle.Episodes, YAMLEpisode{
 				Name:   ep.Name,
-				Link:   ep.Link,
+				Url:    ep.Url,
 				Images: ep.Images.URLs(),
 			})
 		}

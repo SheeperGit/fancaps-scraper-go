@@ -314,7 +314,7 @@ func getContentPadding(s string) int {
 /* Returns true, if `t` is in `titles`, and returns false otherwise. */
 func containsTitle(titles []*types.Title, t *types.Title) bool {
 	for _, title := range titles {
-		if title.Link == t.Link {
+		if title.Url == t.Url {
 			return true
 		}
 	}
@@ -339,7 +339,7 @@ func LaunchTitleMenu(titles []*types.Title, tabs []types.Category, debug bool) [
 			if debug {
 				fmt.Println("\nSELECTED TITLES:")
 				for _, title := range m.selected {
-					fmt.Printf("%s [%s] -> %s\n", title.Name, title.Category, title.Link)
+					fmt.Printf("%s [%s] -> %s\n", title.Name, title.Category, title.Url)
 				}
 			}
 			fmt.Println()
@@ -363,7 +363,7 @@ Uses the URL of the title to check equality.
 */
 func (m *titleModel) toggle(title *types.Title) {
 	for i, t := range m.selected {
-		if t.Link == title.Link {
+		if t.Url == title.Url {
 			m.selected = append(m.selected[:i], m.selected[i+1:]...)
 			return
 		}

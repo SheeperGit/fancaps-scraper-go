@@ -40,8 +40,8 @@ func GetTitles(searchURLs []string) []*types.Title {
 
 			titlesMu.Lock()
 			for _, t := range ts {
-				if _, exists := seen[t.Link]; !exists {
-					seen[t.Link] = struct{}{}
+				if _, exists := seen[t.Url]; !exists {
+					seen[t.Url] = struct{}{}
 					titles = append(titles, t)
 				}
 			}
@@ -88,7 +88,7 @@ func GetTitles(searchURLs []string) []*types.Title {
 
 		fmt.Println("\n\nFOUND TITLES:")
 		for _, t := range titles {
-			fmt.Printf("%-*s -> %s\n", maxTitleWidth, t.Name, t.Link)
+			fmt.Printf("%-*s -> %s\n", maxTitleWidth, t.Name, t.Url)
 		}
 		fmt.Printf("\n\n")
 	}
@@ -105,12 +105,12 @@ func scrapeTitles(searchURL string, flags cli.CLIFlags) []*types.Title {
 
 	/* Extract title info. */
 	c.OnHTML("h4 > a", func(e *colly.HTMLElement) {
-		link := e.Request.AbsoluteURL(e.Attr("href"))
-		category := getCategory(link)
+		url := e.Request.AbsoluteURL(e.Attr("href"))
+		category := getCategory(url)
 		title := &types.Title{
 			Category: category,
 			Name:     e.Text,
-			Link:     link,
+			Url:      url,
 			Images:   &types.Images{},
 		}
 		titles = append(titles, title)

@@ -17,7 +17,7 @@ func GetEpisodes(titles []*types.Title) []*types.Title {
 	flags := cli.Flags()
 
 	if flags.Debug {
-		fmt.Println("\nEPISODE LINKS VISITED:")
+		fmt.Println("\nEPISODE URLS VISITED:")
 	}
 
 	/* Get the episodes for each title. */
@@ -35,7 +35,7 @@ func GetEpisodes(titles []*types.Title) []*types.Title {
 			case types.CategoryMovie:
 				// Do nothing
 			default:
-				fmt.Fprintf(os.Stderr, "Unknown Category: %s (%s) -> [%s]\n", title.Name, title.Link, title.Category)
+				fmt.Fprintf(os.Stderr, "Unknown Category: %s (%s) -> [%s]\n", title.Name, title.Url, title.Category)
 			}
 		}
 
@@ -58,9 +58,9 @@ func GetEpisodes(titles []*types.Title) []*types.Title {
 	if flags.Debug {
 		fmt.Println("\n\nFOUND TITLES AND EPISODES:")
 		for _, title := range titles {
-			fmt.Printf("%s [%s] -> %s\n", title.Name, title.Category, title.Link)
+			fmt.Printf("%s [%s] -> %s\n", title.Name, title.Category, title.Url)
 			for _, episode := range title.Episodes {
-				fmt.Printf("\t%s -> %s\n", episode.Name, episode.Link)
+				fmt.Printf("\t%s -> %s\n", episode.Name, episode.Url)
 			}
 		}
 		fmt.Printf("\n\n")
@@ -78,11 +78,11 @@ func scrapeTVEpisodes(title *types.Title, flags cli.CLIFlags) []*types.Episode {
 
 	/* Extract episode info. (TV-only) */
 	c.OnHTML("h3 > a[href]", func(e *colly.HTMLElement) {
-		link := e.Request.AbsoluteURL(e.Attr("href"))
+		url := e.Request.AbsoluteURL(e.Attr("href"))
 		episode := &types.Episode{
 			Title:  title,
 			Name:   getEpisodeTitle(e.Text),
-			Link:   link,
+			Url:    url,
 			Images: &types.Images{},
 		}
 		episodes = append(episodes, episode)
@@ -105,7 +105,7 @@ func scrapeTVEpisodes(title *types.Title, flags cli.CLIFlags) []*types.Episode {
 		})
 	}
 
-	c.Visit(title.Link)
+	c.Visit(title.Url)
 
 	if flags.Async {
 		c.Wait()
@@ -124,11 +124,11 @@ func scrapeAnimeEpisodes(title *types.Title, flags cli.CLIFlags) []*types.Episod
 	/* Extract episode info. (Anime-only) */
 	c.OnHTML("a[href] > h3", func(e *colly.HTMLElement) {
 		href, _ := e.DOM.Parent().Attr("href")
-		link := e.Request.AbsoluteURL(href)
+		url := e.Request.AbsoluteURL(href)
 		episode := &types.Episode{
 			Title:  title,
 			Name:   getEpisodeTitle(e.Text) + " of " + title.Name, // Append title name (required for `getEpisodeByNumber()`)
-			Link:   link,
+			Url:    url,
 			Images: &types.Images{},
 		}
 		episodes = append(episodes, episode)
@@ -149,7 +149,7 @@ func scrapeAnimeEpisodes(title *types.Title, flags cli.CLIFlags) []*types.Episod
 		})
 	}
 
-	c.Visit(title.Link)
+	c.Visit(title.Url)
 
 	if flags.Async {
 		c.Wait()

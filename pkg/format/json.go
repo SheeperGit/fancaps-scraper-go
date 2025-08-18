@@ -10,7 +10,7 @@ import (
 type JSONTitle struct {
 	Name     string        `json:"name"`
 	Category string        `json:"category"`
-	Link     string        `json:"link"`
+	Url      string        `json:"url"`
 	Episodes []JSONEpisode `json:"episodes"`
 	Images   []string      `json:"images,omitempty"`
 }
@@ -18,7 +18,7 @@ type JSONTitle struct {
 /* An Episode JSON object. */
 type JSONEpisode struct {
 	Name   string   `json:"name"`
-	Link   string   `json:"link"`
+	Url    string   `json:"url"`
 	Images []string `json:"images,omitempty"`
 }
 
@@ -33,13 +33,13 @@ func (JSONFormatter) Format(titles []*types.Title) ([]byte, error) {
 		jsonTitle := JSONTitle{
 			Name:     t.Name,
 			Category: t.Category.String(),
-			Link:     t.Link,
+			Url:      t.Url,
 			Images:   t.Images.URLs(),
 		}
 		for _, ep := range t.Episodes {
 			jsonTitle.Episodes = append(jsonTitle.Episodes, JSONEpisode{
 				Name:   ep.Name,
-				Link:   ep.Link,
+				Url:    ep.Url,
 				Images: ep.Images.URLs(),
 			})
 		}

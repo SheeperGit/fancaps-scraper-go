@@ -6,7 +6,7 @@ import "time"
 type Episode struct {
 	Title  *Title    // Title to which the episode belongs to.
 	Name   string    // Name of the episode.
-	Link   string    // Link to the episode on fancaps.net.
+	Url    string    // URL to the episode on fancaps.net.
 	Images *Images   // Image info about the episode. (Non-empty for Anime/TV Series Only)
 	Start  time.Time // Start time of episode download.
 }

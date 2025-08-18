@@ -79,9 +79,9 @@ func SelectEpisodes(titles []*types.Title, debug bool) []*types.Title {
 	if debug {
 		fmt.Println("\nSELECTED EPISODES:")
 		for _, title := range titles {
-			fmt.Printf("%s [%s] -> %s\n", title.Name, title.Category, title.Link)
+			fmt.Printf("%s [%s] -> %s\n", title.Name, title.Category, title.Url)
 			for _, episode := range title.Episodes {
-				fmt.Printf("\t%s -> %s\n", episode.Name, episode.Link)
+				fmt.Printf("\t%s -> %s\n", episode.Name, episode.Url)
 			}
 		}
 	}
@@ -138,7 +138,7 @@ func getLastEpisodeNumber(episodes []*types.Episode) int {
 /* Returns true, if `e` is in `episodes`, and returns false otherwise. */
 func containsEpisode(episodes []*types.Episode, e *types.Episode) bool {
 	for _, episode := range episodes {
-		if episode.Link == e.Link {
+		if episode.Url == e.Url {
 			return true
 		}
 	}

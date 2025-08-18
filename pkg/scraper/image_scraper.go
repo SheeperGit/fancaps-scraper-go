@@ -54,7 +54,7 @@ func GetImages(titles []*types.Title) {
 				case types.CategoryAnime, types.CategoryTV:
 					scrapeEpisodeImages(episode, title, flags)
 				default:
-					fmt.Fprintf(os.Stderr, "Unknown Category: %s (%s) -> [%s]\n", title.Name, title.Link, title.Category)
+					fmt.Fprintf(os.Stderr, "Unknown Category: %s (%s) -> [%s]\n", title.Name, title.Url, title.Category)
 				}
 			}
 
@@ -136,7 +136,7 @@ func scrapeTitleImages(title *types.Title, flags cli.CLIFlags) {
 		}
 	})
 
-	c.Visit(title.Link)
+	c.Visit(title.Url)
 
 	if flags.Async {
 		c.Wait()
@@ -188,7 +188,7 @@ func scrapeEpisodeImages(episode *types.Episode, title *types.Title, flags cli.C
 		}
 	})
 
-	c.Visit(episode.Link)
+	c.Visit(episode.Url)
 
 	if flags.Async {
 		c.Wait()
