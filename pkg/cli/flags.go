@@ -24,7 +24,8 @@ type CLIFlags struct {
 	Async             bool             // If true, enable asynchronous network requests.
 	Debug             bool             // If true, print useful debugging messages.
 	NoLog             bool             // If true, disable logging.
-	DryRun            format.Format
+	DryRun            bool             // If true, perform a dry run. (Safe. No changes made.)
+	Format            format.Format    // Format used to print scraped titles.
 }
 
 var flags CLIFlags // User CLI flags.
@@ -41,7 +42,8 @@ func ParseCLI() {
 		async             bool
 		debug             bool
 		nolog             bool
-		dryRun            format.Format
+		dryRun            bool
+		format            format.Format
 	)
 
 	f := pflag.NewFlagSet("fancaps-scraper", pflag.ContinueOnError)
@@ -69,7 +71,8 @@ func ParseCLI() {
 	f.BoolVar(&async, "async", true, "Enable asynchronous requests.")
 	f.BoolVar(&debug, "debug", false, "Enable debug mode.")
 	f.BoolVar(&nolog, "no-log", false, "Disable logging.")
-	enumflag.EnumOptVarP(f, &dryRun, "dry-run", "n", defaultFormat, enumToFormat, "Enable dry-run mode: no changes are made, results are printed in the chosen format.")
+	f.BoolVarP(&dryRun, "dry-run", "n", false, "Enable dry-run mode: no changes are made, results are printed in the chosen format.")
+	enumflag.EnumVar(f, &format, "format", defaultFormat, enumToFormat, "Output format.")
 
 	/* Custom help. */
 	var help bool
