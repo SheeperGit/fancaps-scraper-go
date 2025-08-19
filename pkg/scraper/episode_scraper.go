@@ -16,8 +16,8 @@ func GetEpisodes(titles []*types.Title) []*types.Title {
 	var wg sync.WaitGroup
 	flags := cli.Flags()
 
-	if flags.Debug {
-		fmt.Println("\nEPISODE URLS VISITED:")
+	if flags.Verbose {
+		fmt.Println("\nVISITING EPISODE URLS:")
 	}
 
 	/* Get the episodes for each title. */
@@ -99,7 +99,7 @@ func scrapeTVEpisodes(title *types.Title, flags cli.CLIFlags) []*types.Episode {
 		}
 	})
 
-	if flags.Debug {
+	if flags.Verbose {
 		c.OnRequest(func(req *colly.Request) {
 			fmt.Println("Visiting TV Episode URL:", req.URL.String())
 		})
@@ -143,7 +143,7 @@ func scrapeAnimeEpisodes(title *types.Title, flags cli.CLIFlags) []*types.Episod
 		c.Visit(nextPageURL)
 	})
 
-	if flags.Debug {
+	if flags.Verbose {
 		c.OnRequest(func(req *colly.Request) {
 			fmt.Println("Visiting Anime Episode URL:", req.URL.String())
 		})

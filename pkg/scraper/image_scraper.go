@@ -120,7 +120,7 @@ func scrapeTitleImages(title *types.Title, flags cli.CLIFlags) {
 		title.Images.AddURL(imgURL)
 		title.IncrementImageTotal()
 
-		if flags.Debug {
+		if flags.Verbose {
 			fmt.Printf("%s [%s] image found! (%s)\n", title.Name, title.Category, imgURL)
 		}
 	})
@@ -172,7 +172,7 @@ func scrapeEpisodeImages(episode *types.Episode, title *types.Title, flags cli.C
 		episode.Images.AddURL(imgURL)
 		episode.IncrementImageTotal()
 
-		if flags.Debug {
+		if flags.Verbose {
 			fmt.Printf("%s - %s [%s] image found! (%s)\n", title.Name, episode.Name, title.Category, imgURL)
 		}
 	})

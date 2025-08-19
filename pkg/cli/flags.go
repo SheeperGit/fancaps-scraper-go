@@ -22,6 +22,7 @@ type CLIFlags struct {
 	MinDelay          time.Duration    // Minimum delay applied after subsequent image requests. (Non-negative)
 	RandDelay         time.Duration    // Maximum random delay applied after subsequent image requests. (Non-negative)
 	Async             bool             // If true, enable asynchronous network requests.
+	Verbose           bool             // If true, explain what is being done.
 	Debug             bool             // If true, print useful debugging messages.
 	NoLog             bool             // If true, disable logging.
 	DryRun            bool             // If true, perform a dry run. (Safe. No changes made.)
@@ -40,6 +41,7 @@ func ParseCLI() {
 		minDelay          time.Duration
 		randDelay         time.Duration
 		async             bool
+		verbose           bool
 		debug             bool
 		nolog             bool
 		dryRun            bool
@@ -69,10 +71,11 @@ func ParseCLI() {
 	numflag.NnDurationVar(f, &minDelay, "min-delay", defaultMinDelay, "Minimum delay applied after subsequent image requests.")
 	numflag.NnDurationVar(f, &randDelay, "random-delay", defaultRandDelay, "Maximum random delay applied after subsequent image requests.")
 	f.BoolVar(&async, "async", true, "Enable asynchronous requests.")
-	f.BoolVar(&debug, "debug", false, "Enable debug mode.")
+	f.BoolVarP(&verbose, "verbose", "v", false, "Display what is being done.")
+	f.BoolVar(&debug, "debug", false, "Enable debug mode: print useful results as stages complete (titles, episodes, images, etc.).")
 	f.BoolVar(&nolog, "no-log", false, "Disable logging.")
 	f.BoolVarP(&dryRun, "dry-run", "n", false, "Enable dry-run mode: no changes are made, results are printed in the chosen format.")
-	enumflag.EnumVar(f, &format, "format", defaultFormat, enumToFormat, "Output format. (Used in dry-run mode only.)")
+	enumflag.EnumVar(f, &format, "format", defaultFormat, enumToFormat, "Output format. (used in dry-run mode only)")
 
 	/* Custom help. */
 	var help bool
@@ -98,6 +101,7 @@ func ParseCLI() {
 	flags.MinDelay = minDelay
 	flags.RandDelay = randDelay
 	flags.Async = async
+	flags.Verbose = verbose
 	flags.Debug = debug
 	flags.NoLog = nolog
 	flags.DryRun = dryRun
