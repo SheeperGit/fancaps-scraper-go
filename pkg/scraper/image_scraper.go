@@ -34,7 +34,7 @@ func GetImages(titles []*types.Title) {
 	for _, title := range titles {
 		/* Handle movies seperately, since they have no episodes. */
 		if title.Category == types.CategoryMovie {
-			if flags.Async {
+			if !flags.NoAsync {
 				wg.Add(1)
 				go func(t *types.Title) {
 					defer wg.Done()
@@ -58,7 +58,7 @@ func GetImages(titles []*types.Title) {
 				}
 			}
 
-			if flags.Async {
+			if !flags.NoAsync {
 				wg.Add(1)
 				go func(t *types.Title, e *types.Episode) {
 					defer wg.Done()
@@ -70,7 +70,7 @@ func GetImages(titles []*types.Title) {
 		}
 	}
 
-	if flags.Async {
+	if !flags.NoAsync {
 		wg.Wait()
 	}
 
@@ -138,7 +138,7 @@ func scrapeTitleImages(title *types.Title, flags cli.CLIFlags) {
 
 	c.Visit(title.Url)
 
-	if flags.Async {
+	if !flags.NoAsync {
 		c.Wait()
 	}
 }
@@ -190,7 +190,7 @@ func scrapeEpisodeImages(episode *types.Episode, title *types.Title, flags cli.C
 
 	c.Visit(episode.Url)
 
-	if flags.Async {
+	if !flags.NoAsync {
 		c.Wait()
 	}
 }

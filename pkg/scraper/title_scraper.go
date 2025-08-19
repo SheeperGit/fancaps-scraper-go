@@ -124,7 +124,7 @@ func scrapeTitles(searchURL string, flags cli.CLIFlags) []*types.Title {
 
 	c.Visit(searchURL)
 
-	if flags.Async {
+	if !flags.NoAsync {
 		c.Wait()
 	}
 

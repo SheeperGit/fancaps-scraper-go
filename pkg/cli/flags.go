@@ -21,9 +21,9 @@ type CLIFlags struct {
 	ParallelDownloads uint8            // Maximum amount of image downloads to make in parallel.
 	MinDelay          time.Duration    // Minimum delay applied after subsequent image requests. (Non-negative)
 	RandDelay         time.Duration    // Maximum random delay applied after subsequent image requests. (Non-negative)
-	Async             bool             // If true, enable asynchronous network requests.
 	Verbose           bool             // If true, explain what is being done.
 	Debug             bool             // If true, print useful debugging messages.
+	NoAsync           bool             // If true, disable asynchronous network requests.
 	NoLog             bool             // If true, disable logging.
 	DryRun            bool             // If true, perform a dry run. (Safe. No changes made.)
 	Format            format.Format    // Format used to print scraped titles.
@@ -40,10 +40,10 @@ func ParseCLI() {
 		parallelDownloads uint8
 		minDelay          time.Duration
 		randDelay         time.Duration
-		async             bool
 		verbose           bool
 		debug             bool
-		nolog             bool
+		noAsync           bool
+		noLog             bool
 		dryRun            bool
 		format            format.Format
 	)
@@ -70,10 +70,10 @@ func ParseCLI() {
 	numflag.Puint8VarP(f, &parallelDownloads, "parallel-downloads", "p", defaultParallelDownloads, "Maximum concurrent image downloads.")
 	numflag.NnDurationVar(f, &minDelay, "min-delay", defaultMinDelay, "Minimum delay between image requests.")
 	numflag.NnDurationVar(f, &randDelay, "random-delay", defaultRandDelay, "Maximum random delay between image requests.")
-	f.BoolVar(&async, "async", true, "Enable asynchronous requests.")
 	f.BoolVarP(&verbose, "verbose", "v", false, "Display what is being done.")
 	f.BoolVar(&debug, "debug", false, "Display results as stages complete.")
-	f.BoolVar(&nolog, "no-log", false, "Disable logging.")
+	f.BoolVar(&noAsync, "no-async", false, "Disable asynchronous requests.")
+	f.BoolVar(&noLog, "no-log", false, "Disable logging.")
 	f.BoolVarP(&dryRun, "dry-run", "n", false, "Do not change anything, only print results.")
 	enumflag.EnumVar(f, &format, "format", defaultFormat, enumToFormat, "Output format for dry-run.")
 
@@ -100,10 +100,10 @@ func ParseCLI() {
 	flags.ParallelDownloads = parallelDownloads
 	flags.MinDelay = minDelay
 	flags.RandDelay = randDelay
-	flags.Async = async
+	flags.NoAsync = noAsync
 	flags.Verbose = verbose
 	flags.Debug = debug
-	flags.NoLog = nolog
+	flags.NoLog = noLog
 	flags.DryRun = dryRun
 	flags.Format = format
 }

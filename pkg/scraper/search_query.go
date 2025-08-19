@@ -103,14 +103,7 @@ func titleExists(searchURL string) bool {
 	titleExists := false
 	flags := cli.Flags()
 
-	scraperOpts := []func(*colly.Collector){
-		colly.AllowedDomains("fancaps.net"),
-	}
-
-	if flags.Async {
-		scraperOpts = append(scraperOpts, colly.Async(true))
-	}
-
+	scraperOpts := GetScraperOpts(flags)
 	c := colly.NewCollector(scraperOpts...)
 
 	/* Search the results of each category. */
@@ -124,7 +117,7 @@ func titleExists(searchURL string) bool {
 
 	c.Visit(searchURL)
 
-	if flags.Async {
+	if !flags.NoAsync {
 		c.Wait()
 	}
 

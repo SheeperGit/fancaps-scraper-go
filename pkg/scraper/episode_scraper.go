@@ -39,7 +39,7 @@ func GetEpisodes(titles []*types.Title) []*types.Title {
 			}
 		}
 
-		if flags.Async {
+		if !flags.NoAsync {
 			wg.Add(1)
 			go func(title *types.Title) {
 				defer wg.Done()
@@ -50,7 +50,7 @@ func GetEpisodes(titles []*types.Title) []*types.Title {
 		}
 	}
 
-	if flags.Async {
+	if !flags.NoAsync {
 		wg.Wait()
 	}
 
@@ -107,7 +107,7 @@ func scrapeTVEpisodes(title *types.Title, flags cli.CLIFlags) []*types.Episode {
 
 	c.Visit(title.Url)
 
-	if flags.Async {
+	if !flags.NoAsync {
 		c.Wait()
 	}
 
@@ -151,7 +151,7 @@ func scrapeAnimeEpisodes(title *types.Title, flags cli.CLIFlags) []*types.Episod
 
 	c.Visit(title.Url)
 
-	if flags.Async {
+	if !flags.NoAsync {
 		c.Wait()
 	}
 

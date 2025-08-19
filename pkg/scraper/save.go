@@ -69,7 +69,7 @@ func DownloadImages(titles []*types.Title) {
 		if title.Category == types.CategoryMovie {
 			URLs := title.Images.URLs()
 			for _, url := range URLs {
-				if flags.Async {
+				if !flags.NoAsync {
 					downloadImgAsync(titleDir, title, url)
 				} else {
 					downloadImg(titleDir, title, url)
@@ -86,7 +86,7 @@ func DownloadImages(titles []*types.Title) {
 			URLs := episode.Images.URLs()
 			episode.Start = time.Now()
 			for _, url := range URLs {
-				if flags.Async {
+				if !flags.NoAsync {
 					downloadImgAsync(episodeDir, episode, url)
 				} else {
 					downloadImg(episodeDir, episode, url)
@@ -95,7 +95,7 @@ func DownloadImages(titles []*types.Title) {
 		}
 	}
 
-	if flags.Async {
+	if !flags.NoAsync {
 		wg.Wait()
 	}
 }
