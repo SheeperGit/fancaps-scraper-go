@@ -66,5 +66,5 @@ func (e *enumValue[T]) Type() string {
 /* Register an enum flag. */
 func EnumVar[T cmp.Ordered](flagSet *pflag.FlagSet, p *T, name string, value T, enumToVal map[string]T, usage string) {
 	ev := newEnumValue(value, p, enumToVal)
-	flagSet.Var(ev, name, fmt.Sprintf("%s (allowed: %s)", usage, ev.meta.validEnums))
+	flagSet.Var(ev, name, fmt.Sprintf("%s %s", usage, ev.meta.validEnums))
 }

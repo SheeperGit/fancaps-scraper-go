@@ -80,5 +80,5 @@ func (e *enumSliceValue[T]) Type() string {
 /* Registers an enum slice flag. */
 func EnumSliceVarP[T cmp.Ordered](flagSet *pflag.FlagSet, p *[]T, name, shorthand string, value []T, enumToVal map[string]T, usage string) {
 	ev := newEnumSliceValue(value, p, enumToVal)
-	flagSet.VarP(ev, name, shorthand, fmt.Sprintf("%s (allowed: %s)", usage, ev.meta.validEnums))
+	flagSet.VarP(ev, name, shorthand, fmt.Sprintf("%s %s", usage, ev.meta.validEnums))
 }

@@ -40,7 +40,7 @@ func newEnumMeta[T cmp.Ordered](value []T, enumToVal map[string]T) *enumMeta[T] 
 			names[i] = valToEnum[v]
 		}
 
-		return strings.Join(names, ", ")
+		return "[" + strings.Join(names, "|") + "]"
 	}()
 
 	/* Validate default values. */

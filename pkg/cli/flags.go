@@ -67,15 +67,15 @@ func ParseCLI() {
 	f.StringSliceVarP(&queries, "query", "q", []string{}, "Search query terms.")
 	enumflag.EnumSliceVarP(f, &categories, "categories", "c", defaultCategories, enumToCategory, "Categories to search.")
 	fsflag.CreateDirVarP(f, &outputDir, "output-dir", "o", defaultOutputDir, "Output directory for images.")
-	numflag.Puint8VarP(f, &parallelDownloads, "parallel-downloads", "p", defaultParallelDownloads, "Maximum amount of image downloads to request in parallel.")
-	numflag.NnDurationVar(f, &minDelay, "min-delay", defaultMinDelay, "Minimum delay applied after subsequent image requests.")
-	numflag.NnDurationVar(f, &randDelay, "random-delay", defaultRandDelay, "Maximum random delay applied after subsequent image requests.")
+	numflag.Puint8VarP(f, &parallelDownloads, "parallel-downloads", "p", defaultParallelDownloads, "Maximum concurrent image downloads.")
+	numflag.NnDurationVar(f, &minDelay, "min-delay", defaultMinDelay, "Minimum delay between image requests.")
+	numflag.NnDurationVar(f, &randDelay, "random-delay", defaultRandDelay, "Maximum random delay between image requests.")
 	f.BoolVar(&async, "async", true, "Enable asynchronous requests.")
 	f.BoolVarP(&verbose, "verbose", "v", false, "Display what is being done.")
-	f.BoolVar(&debug, "debug", false, "Enable debug mode: print useful results as stages complete (titles, episodes, images, etc.).")
+	f.BoolVar(&debug, "debug", false, "Display results as stages complete.")
 	f.BoolVar(&nolog, "no-log", false, "Disable logging.")
-	f.BoolVarP(&dryRun, "dry-run", "n", false, "Enable dry-run mode: no changes are made, results are printed in the chosen format.")
-	enumflag.EnumVar(f, &format, "format", defaultFormat, enumToFormat, "Output format. (used in dry-run mode only)")
+	f.BoolVarP(&dryRun, "dry-run", "n", false, "Do not change anything, only print results.")
+	enumflag.EnumVar(f, &format, "format", defaultFormat, enumToFormat, "Output format for dry-run.")
 
 	/* Custom help. */
 	var help bool
