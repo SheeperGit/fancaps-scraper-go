@@ -3,8 +3,64 @@ package menu
 import (
 	// "github.com/charmbracelet/bubbles/help"
 	// "github.com/charmbracelet/bubbles/key"
+
 	"github.com/charmbracelet/lipgloss"
 )
+
+type Tab[T ~int] struct {
+	id     T   // Tab identifier.
+	cursor int // Cursor position within the tab.
+}
+
+type TabList[T ~int] struct {
+	tabs        []Tab[T]  // Info of all tabs.
+	activeIndex int       // Active tab index in the tab list.
+	stats       map[T]int // Tab statistics.
+}
+
+/* Format of a menu line. */
+const menuLineFormat = "%c [%c] %s"
+
+/* Menu Styles. */
+var inputStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF75B7"))
+
+/*
+Returns a TabList from tab statistics `tabStats`.
+`tabStats` is assumed to contain at least one element with an item.
+*/
+func initTabList[T ~int](stats map[T]int) TabList[T] {
+	tabs, cursor := []Tab[T]{}, 0
+	for id := T(0); id < T(len(stats)); id++ {
+		if tabItems := stats[id]; tabItems > 0 {
+			tabs = append(tabs, Tab[T]{
+				id:     id,
+				cursor: cursor,
+			})
+			cursor += tabItems // Update next initial tab cursor position.
+		}
+	}
+
+	return TabList[T]{
+		tabs:        tabs,
+		activeIndex: 0,
+		stats:       stats,
+	}
+}
+
+/* Returns a list of tabs from a TabList. */
+func (tl *TabList[T]) Tabs() []T {
+	out := make([]T, len(tl.tabs))
+	for i := range tl.tabs {
+		out[i] = tl.tabs[i].id
+	}
+
+	return out
+}
+
+/* Returns the active tab from a TabList. */
+func (tl *TabList[T]) ActiveTab() *Tab[T] {
+	return &tl.tabs[tl.activeIndex]
+}
 
 // /* Base key map. */
 // type baseKeyMap struct {
@@ -16,12 +72,6 @@ import (
 // 	Help      key.Binding
 // 	Quit      key.Binding
 // }
-
-/* Format of a menu line. */
-const menuLineFormat = "%c [%c] %s"
-
-/* Menu Styles. */
-var inputStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF75B7"))
 
 // /* Base/Default keybindings to be shown in the mini-help view. */
 // func (k baseKeyMap) ShortHelp() []key.Binding {

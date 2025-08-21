@@ -51,6 +51,11 @@ func (i *puint8Value) Type() string {
 }
 
 /* Registers a strictly positive uint8 flag. */
+func Puint8Var(flagSet *pflag.FlagSet, p *uint8, name string, value uint8, usage string) {
+	flagSet.Var(newPuint8Value(value, p), name, fmt.Sprintf("%s (1-255)", usage))
+}
+
+/* Registers a strictly positive uint8 flag, with a shorthand. */
 func Puint8VarP(flagSet *pflag.FlagSet, p *uint8, name, shorthand string, value uint8, usage string) {
 	flagSet.VarP(newPuint8Value(value, p), name, shorthand, fmt.Sprintf("%s (1-255)", usage))
 }

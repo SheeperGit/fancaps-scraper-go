@@ -31,6 +31,7 @@ Examples:
 	defaultParallelDownloads uint8         = 10              // Default maximum amount of titles or episodes to download images from in parallel.
 	defaultMinDelay          time.Duration = 1 * time.Second // Default minimum delay after every new image download request.
 	defaultRandDelay         time.Duration = 5 * time.Second // Default maximum random delay after every new image download request.
+	defaultMenuLines         uint8         = 10              // Default number of lines shown in a menu's viewport.
 )
 
 var (

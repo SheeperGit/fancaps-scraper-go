@@ -83,48 +83,49 @@ var titleKeys = titleKeyMap{
 type titleModel struct {
 	/* Base Title Model fields. */
 
-	Tabs       []types.Category // Menu tabs.
-	TabContent []*types.Title   // Active tab content.
-	activeTab  types.Category   // Currently viewed tab.
-	keys       titleKeyMap      // Menu Keybinds.
-	help       help.Model       // Help view.
-	inputStyle lipgloss.Style   // Input style.
-	cursor     int              // Position of current selection.
-	choices    []*types.Title   // Available choices.
-	selected   []*types.Title   // Selected choices.
-	confirmed  bool             // True if the user confirmed their selection, false otherwise.
-	errMsg     string           // Error message. If empty, no errors.
+	tabList    TabList[types.Category] // Menu tabs.
+	keys       titleKeyMap             // Menu Keybinds.
+	help       help.Model              // Help view.
+	inputStyle lipgloss.Style          // Input style.
+	choices    []*types.Title          // Available choices.
+	selected   []*types.Title          // Selected choices.
+	confirmed  bool                    // True if the user confirmed their selection, false otherwise.
+	errMsg     string                  // Error message. If empty, no errors.
 
 	/* Cached View() fields. */
 
-	catStats     *types.CatStats // Amount of titles per category.
-	menuWidth    int             // Menu width.
-	menuHeight   int             // Menu height.
-	contentWidth int             // Content width.
+	menuWidth    int // Menu width.
+	menuHeight   int // Menu height.
+	contentWidth int // Content width.
 }
 
 /* Initializes the title model. */
-func initialTitleModel(titles []*types.Title) titleModel {
+func initialTitleModel(titles []*types.Title, menuLines uint8) titleModel {
 	contentPadding := getContentPadding(menuLineFormat)
 	contentWidth := lipgloss.Width(windowStyle.Render(ui.GetLongestTitle(titles))) + contentPadding - windowStyle.GetHorizontalPadding()
 
-	catStats := types.GetCatStats(titles)
-	tabs := catStats.UsedCategories()
-	activeTab := tabs[0]
-	menuWidth := lipgloss.Width(getTabRow(tabs, activeTab, contentWidth)) - windowStyle.GetHorizontalFrameSize()
-	menuHeight := catStats.Max + windowStyle.GetVerticalFrameSize()
+	/* Count up titles per category. */
+	catStats := make(map[types.Category]int, len(types.CategoryName))
+	for c := types.Category(0); c < types.Category(len(types.CategoryName)); c++ {
+		catStats[c] = 0 // Initializing every statistic guarantees its existence in the map.
+	}
+	for _, t := range titles {
+		catStats[t.Category]++
+	}
+
+	tabList := initTabList(catStats)
+
+	menuWidth := lipgloss.Width(getTabRow(tabList.Tabs(), tabList.ActiveTab().id, contentWidth)) - windowStyle.GetHorizontalFrameSize()
+	menuHeight := int(menuLines) + windowStyle.GetVerticalFrameSize()
 
 	return titleModel{
-		Tabs:       tabs,
-		TabContent: []*types.Title{},
-		activeTab:  activeTab,
+		tabList:    tabList,
 		keys:       titleKeys,
 		help:       help.New(),
 		inputStyle: inputStyle,
 		choices:    titles,
 		selected:   []*types.Title{},
 
-		catStats:     catStats,
 		menuWidth:    menuWidth,
 		menuHeight:   menuHeight,
 		contentWidth: contentWidth,
@@ -157,7 +158,7 @@ func (m titleModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keys.Right):
 			m.setTabWrapRight()
 		case key.Matches(msg, m.keys.Toggle):
-			choice := m.choices[m.cursor]
+			choice := m.choices[m.tabList.ActiveTab().cursor]
 			m.toggle(choice)
 		case key.Matches(msg, m.keys.ToggleAll):
 			m.toggleAll()
@@ -197,7 +198,7 @@ var (
 func (m titleModel) View() string {
 	doc := strings.Builder{}
 
-	tabRow := getTabRow(m.Tabs, m.activeTab, m.contentWidth)
+	tabRow := getTabRow(m.tabList.Tabs(), m.tabList.ActiveTab().id, m.contentWidth)
 	doc.WriteString(tabRow)
 
 	content := m.getTitleMenuContent()
@@ -214,6 +215,7 @@ func (m titleModel) View() string {
 	return docStyle.Render(doc.String())
 }
 
+/* Returns the render of the tab row at the top of the menu. */
 func getTabRow(tabs []types.Category, activeTab types.Category, contentWidth int) string {
 	tabCount := len(tabs)
 
@@ -260,9 +262,9 @@ func (m titleModel) getTitleMenuContent() string {
 
 	for i, choice := range m.choices {
 		/* Only render titles matching the category of the active tab. */
-		if m.activeTab == choice.Category {
+		if m.tabList.ActiveTab().id == choice.Category {
 			cursor := ' '
-			if m.cursor == i {
+			if m.tabList.ActiveTab().cursor == i {
 				cursor = '>'
 			}
 
@@ -277,7 +279,7 @@ func (m titleModel) getTitleMenuContent() string {
 			if checked == 'x' {
 				style = style.Inherit(ui.SuccessStyle)
 			}
-			if m.cursor == i {
+			if m.tabList.ActiveTab().cursor == i {
 				style = style.Inherit(ui.HighlightStyle)
 			}
 
@@ -327,8 +329,8 @@ Launches the Title Menu.
 Returns non-empty selected titles, or exits if the user quits.
 If `debug` is enabled, then this function prints out the selected titles.
 */
-func LaunchTitleMenu(titles []*types.Title, tabs []types.Category, debug bool) []*types.Title {
-	p := tea.NewProgram(initialTitleModel(titles))
+func LaunchTitleMenu(titles []*types.Title, tabs []types.Category, menuLines uint8, debug bool) []*types.Title {
+	p := tea.NewProgram(initialTitleModel(titles, menuLines))
 	if m, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Title Menu has encountered an error: %v", err)
 		os.Exit(1)
@@ -376,7 +378,7 @@ func (m *titleModel) toggleAll() {
 	/* Get all titles from the active tab. */
 	var activeTabCategories []*types.Title
 	for _, t := range m.choices {
-		if t.Category == m.activeTab {
+		if t.Category == m.tabList.ActiveTab().id {
 			activeTabCategories = append(activeTabCategories, t)
 		}
 	}
@@ -394,7 +396,7 @@ func (m *titleModel) toggleAll() {
 		/* New selection becomes all previously selected titles excluding all titles from the active tab. */
 		var newSelected []*types.Title
 		for _, t := range m.selected {
-			if t.Category != m.activeTab {
+			if t.Category != m.tabList.ActiveTab().id {
 				newSelected = append(newSelected, t)
 			}
 		}
@@ -414,23 +416,12 @@ Set the tab of model `m` to either move left,
 or wrap-around to the end of the list of tabs.
 */
 func (m *titleModel) setTabWrapLeft() {
-	i := m.getCategoryTabIndex(m.activeTab)
-
-	switch i {
-	case 0: // Go to last tab, if at the first tab.
-		m.activeTab = m.Tabs[len(m.Tabs)-1]
-	case -1: // Fallback on first tab, if category to switch to was not found.
-		fmt.Fprintf(os.Stderr,
-			"title menu error: failed to find %s in tabs.\n"+
-				"defaulting to first tab...\n\n",
-			m.activeTab.String())
-		m.activeTab = m.Tabs[0]
-	default: // Go to previous tab, otherwise.
-		m.activeTab = m.Tabs[i-1]
+	tabs, i := m.tabList.tabs, m.tabList.activeIndex
+	if i == len(tabs)-1 { // If at the last tab going right, wrap to first.
+		m.tabList.activeIndex = 0
+	} else { // Otherwise, go to next tab.
+		m.tabList.activeIndex = i + 1
 	}
-
-	/* Set cursor to the beginning of the switched tab. */
-	m.cursor = m.getTabStartIndex()
 }
 
 /*
@@ -438,50 +429,12 @@ Set the tab of model `m` to either move right,
 or wrap-around to the beginning of the list of tabs.
 */
 func (m *titleModel) setTabWrapRight() {
-	i := m.getCategoryTabIndex(m.activeTab)
-
-	switch i {
-	case len(m.Tabs) - 1: // Go to first tab, if at the last tab.
-		m.activeTab = m.Tabs[0]
-	case -1: // Fallback on last tab, if category to switch to was not found.
-		fmt.Fprintf(os.Stderr,
-			"title menu error: failed to find %s in tabs.\n"+
-				"defaulting to last tab...\n\n",
-			m.activeTab.String())
-		m.activeTab = m.Tabs[len(m.Tabs)-1]
-	default: // Go to next tab, otherwise.
-		m.activeTab = m.Tabs[i+1]
+	tabs, i := m.tabList.tabs, m.tabList.activeIndex
+	if i == len(tabs)-1 { // If at the last tab going right, go to first tab.
+		m.tabList.activeIndex = 0
+	} else { // Otherwise, go to next tab.
+		m.tabList.activeIndex = i + 1
 	}
-
-	/* Set cursor to the beginning of the switched tab. */
-	m.cursor = m.getTabStartIndex()
-}
-
-/*
-Returns the index of the category `cat` relative to the tab list.
-Returns -1, if `cat` is not found in the tab list.
-*/
-func (m *titleModel) getCategoryTabIndex(cat types.Category) int {
-	for i, tab := range m.Tabs {
-		if tab == cat {
-			return i
-		}
-	}
-
-	return -1
-}
-
-/* Returns the starting cursor index of the active tab. */
-func (m *titleModel) getTabStartIndex() int {
-	tabStartIndex := 0
-	for _, cat := range m.Tabs {
-		if cat == m.activeTab {
-			break
-		}
-		tabStartIndex += m.catStats.Amts[cat]
-	}
-
-	return tabStartIndex
 }
 
 /*
@@ -489,11 +442,14 @@ Set the cursor of model `m` to either move up,
 or wrap-around to the end of the list of choices.
 */
 func (m *titleModel) setCursorWrapUp() {
-	if m.cursor <= 0 || m.choices[m.cursor-1].Category != m.choices[m.cursor].Category {
-		m.cursor = m.cursor + m.catStats.Amts[m.choices[m.cursor].Category] - 1
+	pos, newPos := m.tabList.ActiveTab().cursor, -1
+	if pos <= 0 || m.choices[pos-1].Category != m.choices[pos].Category {
+		newPos = pos + m.tabList.stats[m.choices[pos].Category] - 1
 	} else {
-		m.cursor--
+		newPos = pos - 1
 	}
+
+	m.tabList.ActiveTab().cursor = newPos
 }
 
 /*
@@ -501,11 +457,14 @@ Set the cursor of model `m` to either move down,
 or wrap-around to the beginning of the list of choices.
 */
 func (m *titleModel) setCursorWrapDown() {
-	if m.cursor >= len(m.choices)-1 || m.choices[m.cursor+1].Category != m.choices[m.cursor].Category {
-		m.cursor = m.cursor - m.catStats.Amts[m.choices[m.cursor].Category] + 1
+	pos, newPos := m.tabList.ActiveTab().cursor, -1
+	if pos >= len(m.choices)-1 || m.choices[pos+1].Category != m.choices[pos].Category {
+		newPos = pos - m.tabList.stats[m.choices[pos].Category] + 1
 	} else {
-		m.cursor++
+		newPos = pos + 1
 	}
+
+	m.tabList.ActiveTab().cursor = newPos
 }
 
 func tabBorderWithBottom(left, middle, right string) lipgloss.Border {

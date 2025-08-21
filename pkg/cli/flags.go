@@ -21,6 +21,7 @@ type CLIFlags struct {
 	ParallelDownloads uint8            // Maximum amount of image downloads to make in parallel.
 	MinDelay          time.Duration    // Minimum delay applied after subsequent image requests. (Non-negative)
 	RandDelay         time.Duration    // Maximum random delay applied after subsequent image requests. (Non-negative)
+	MenuLines         uint8            // Number of lines shown in a menu's viewport.
 	Verbose           bool             // If true, explain what is being done.
 	Debug             bool             // If true, print useful debugging messages.
 	NoAsync           bool             // If true, disable asynchronous network requests.
@@ -40,6 +41,7 @@ func ParseCLI() {
 		parallelDownloads uint8
 		minDelay          time.Duration
 		randDelay         time.Duration
+		menuLines         uint8
 		verbose           bool
 		debug             bool
 		noAsync           bool
@@ -70,6 +72,7 @@ func ParseCLI() {
 	numflag.Puint8VarP(f, &parallelDownloads, "parallel-downloads", "p", defaultParallelDownloads, "Maximum concurrent image downloads.")
 	numflag.NnDurationVar(f, &minDelay, "min-delay", defaultMinDelay, "Minimum delay between image requests.")
 	numflag.NnDurationVar(f, &randDelay, "random-delay", defaultRandDelay, "Maximum random delay between image requests.")
+	numflag.Puint8Var(f, &menuLines, "menu-lines", defaultMenuLines, "Number of lines displayed in a menu.")
 	f.BoolVarP(&verbose, "verbose", "v", false, "Display what is being done.")
 	f.BoolVar(&debug, "debug", false, "Display results as stages complete.")
 	f.BoolVar(&noAsync, "no-async", false, "Disable asynchronous requests.")
@@ -100,9 +103,10 @@ func ParseCLI() {
 	flags.ParallelDownloads = parallelDownloads
 	flags.MinDelay = minDelay
 	flags.RandDelay = randDelay
-	flags.NoAsync = noAsync
+	flags.MenuLines = menuLines
 	flags.Verbose = verbose
 	flags.Debug = debug
+	flags.NoAsync = noAsync
 	flags.NoLog = noLog
 	flags.DryRun = dryRun
 	flags.Format = format
