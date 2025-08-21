@@ -219,10 +219,8 @@ func (m titleModel) View() string {
 func getTabRow(tabs []types.Category, activeTab types.Category, contentWidth int) string {
 	tabCount := len(tabs)
 
-	tabWidth := contentWidth / tabCount
-	if tabCount == 1 {
-		tabWidth += 2 // Increase tab width by 2 to make the single-tab menu look less smushed.
-	}
+	padding := (len(types.CategoryName) - tabCount) // Pad tab width proportional to the amount of missing tabs.
+	tabWidth := (contentWidth / tabCount) + padding
 
 	var renderedTabs []string
 	for i, t := range tabs {
