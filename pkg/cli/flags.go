@@ -6,9 +6,6 @@ import (
 	"time"
 
 	"github.com/spf13/pflag"
-	enumflag "sheeper.com/fancaps-scraper-go/pkg/cli/custom/enum"
-	fsflag "sheeper.com/fancaps-scraper-go/pkg/cli/custom/fs"
-	numflag "sheeper.com/fancaps-scraper-go/pkg/cli/custom/number"
 	"sheeper.com/fancaps-scraper-go/pkg/format"
 	"sheeper.com/fancaps-scraper-go/pkg/types"
 )
@@ -67,18 +64,18 @@ func ParseCLI() {
 
 	/* Flag Definitions. */
 	f.StringSliceVarP(&queries, "query", "q", []string{}, "Search query terms.")
-	enumflag.EnumSliceVarP(f, &categories, "categories", "c", defaultCategories, enumToCategory, "Categories to search.")
-	fsflag.CreateDirVarP(f, &outputDir, "output-dir", "o", defaultOutputDir, "Output directory for images.")
-	numflag.Puint8VarP(f, &parallelDownloads, "parallel-downloads", "p", defaultParallelDownloads, "Maximum concurrent image downloads.")
-	numflag.NnDurationVar(f, &minDelay, "min-delay", defaultMinDelay, "Minimum delay between image requests.")
-	numflag.NnDurationVar(f, &randDelay, "random-delay", defaultRandDelay, "Maximum random delay between image requests.")
-	numflag.Puint8Var(f, &menuLines, "menu-lines", defaultMenuLines, "Number of lines displayed in a menu.")
+	EnumSliceVarP(f, &categories, "categories", "c", defaultCategories, enumToCategory, "Categories to search.")
+	CreateDirVarP(f, &outputDir, "output-dir", "o", defaultOutputDir, "Output directory for images.")
+	Puint8VarP(f, &parallelDownloads, "parallel-downloads", "p", defaultParallelDownloads, "Maximum concurrent image downloads.")
+	NnDurationVar(f, &minDelay, "min-delay", defaultMinDelay, "Minimum delay between image requests.")
+	NnDurationVar(f, &randDelay, "random-delay", defaultRandDelay, "Maximum random delay between image requests.")
+	Puint8Var(f, &menuLines, "menu-lines", defaultMenuLines, "Number of lines displayed in a menu.")
 	f.BoolVarP(&verbose, "verbose", "v", false, "Display what is being done.")
 	f.BoolVar(&debug, "debug", false, "Display results as stages complete.")
 	f.BoolVar(&noAsync, "no-async", false, "Disable asynchronous requests.")
 	f.BoolVar(&noLog, "no-log", false, "Disable logging.")
 	f.BoolVarP(&dryRun, "dry-run", "n", false, "Do not change anything, only print results.")
-	enumflag.EnumVar(f, &format, "format", defaultFormat, enumToFormat, "Output format for dry-run.")
+	EnumVar(f, &format, "format", defaultFormat, enumToFormat, "Output format for dry-run.")
 
 	/* Custom help. */
 	var help bool
