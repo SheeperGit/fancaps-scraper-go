@@ -350,10 +350,10 @@ or wrap-around to the end of the list of tabs.
 */
 func (m *titleModel) setTabWrapLeft() {
 	tabs, i := m.tabList.tabs, m.tabList.activeIndex
-	if i == len(tabs)-1 { // If at the last tab going right, wrap to first.
-		m.tabList.activeIndex = 0
-	} else { // Otherwise, go to next tab.
-		m.tabList.activeIndex = i + 1
+	if i == 0 { // If at the first tab going left, wrap to last.
+		m.tabList.activeIndex = len(tabs) - 1
+	} else { // Otherwise, go to previous tab.
+		m.tabList.activeIndex = i - 1
 	}
 }
 
