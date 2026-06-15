@@ -16,7 +16,7 @@ Panics if `val` is less than 0.
 */
 func newNnDuration(val time.Duration, p *time.Duration) *nnDuration {
 	if val < 0 {
-		panic(fmt.Sprintf("default value for nnDuration must be non-negative (got: %v)", val))
+		panic("default value for nnDuration must be non-negative (got: " + val.String() + ")")
 	}
 
 	*p = val
@@ -52,5 +52,5 @@ func (d *nnDuration) Type() string {
 
 /* Registers a non-negative duration flag. */
 func NnDurationVar(flagSet *pflag.FlagSet, p *time.Duration, name string, value time.Duration, usage string) {
-	flagSet.Var(newNnDuration(value, p), name, fmt.Sprintf("%s (non-negative)", usage))
+	flagSet.Var(newNnDuration(value, p), name, usage+" (non-negative)")
 }

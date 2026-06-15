@@ -95,7 +95,7 @@ starting from `start` and its index in `title`.
 Returns an empty set if not found.
 */
 func getEpisodeByNumber(episodes []*types.Episode, start int, episodeNum int) (*types.Episode, int) {
-	re := regexp.MustCompile(fmt.Sprintf(`^Episode.*?\b%d\b.*of`, episodeNum))
+	re := regexp.MustCompile(`^Episode.*?\b` + strconv.Itoa(episodeNum) + `\b.*of`)
 
 	for _, ep := range episodes[start:] {
 		if re.MatchString(ep.Name) {

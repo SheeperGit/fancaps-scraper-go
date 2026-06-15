@@ -16,7 +16,7 @@ Panics if `val` is 0.
 */
 func newPuint8Value(val uint8, p *uint8) *puint8Value {
 	if val == 0 {
-		panic(fmt.Sprintf("default value for puint8 must be strictly positive (got: %d)", val))
+		panic("default value for puint8 must be strictly positive (got: " + string(val) + ")")
 	}
 
 	*p = val
@@ -52,10 +52,10 @@ func (i *puint8Value) Type() string {
 
 /* Registers a strictly positive uint8 flag. */
 func Puint8Var(flagSet *pflag.FlagSet, p *uint8, name string, value uint8, usage string) {
-	flagSet.Var(newPuint8Value(value, p), name, fmt.Sprintf("%s (1-255)", usage))
+	flagSet.Var(newPuint8Value(value, p), name, usage+" (1-255)")
 }
 
 /* Registers a strictly positive uint8 flag, with a shorthand. */
 func Puint8VarP(flagSet *pflag.FlagSet, p *uint8, name, shorthand string, value uint8, usage string) {
-	flagSet.VarP(newPuint8Value(value, p), name, shorthand, fmt.Sprintf("%s (1-255)", usage))
+	flagSet.VarP(newPuint8Value(value, p), name, shorthand, usage+" (1-255)")
 }

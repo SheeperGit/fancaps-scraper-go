@@ -16,7 +16,7 @@ Panics if `val` is does not have existing parent directories.
 */
 func newCreateDirValue(val string, p *string) *createDirValue {
 	if !fsutil.ParentDirsExist(val) {
-		panic(fmt.Sprintf("default value for createDir must have existing parent directories (got: %v)", val))
+		panic("default value for createDir must have existing parent directories (got: " + val + ")")
 	}
 
 	*p = val
@@ -52,5 +52,5 @@ func (d *createDirValue) Type() string {
 
 /* Registers a create directory flag. */
 func CreateDirVarP(flagSet *pflag.FlagSet, p *string, name, shorthand, value, usage string) {
-	flagSet.VarP(newCreateDirValue(value, p), name, shorthand, fmt.Sprintf("%s (parent directories must exist)", usage))
+	flagSet.VarP(newCreateDirValue(value, p), name, shorthand, usage+" (parent directories must exist)")
 }

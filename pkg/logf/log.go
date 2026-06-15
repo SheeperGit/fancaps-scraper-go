@@ -47,7 +47,7 @@ func LogErrorf(logSev LogSeverity, format string, args ...any) {
 	setOnce.Do(func() {
 		fileTimestamp := time.Now().Format("2006-01-02_15-04-05.000000000") // Nanosecond precision.
 		LogDir := flags.OutputDir
-		Logfile = filepath.Join(LogDir, fmt.Sprintf("fsg_errors_%s.txt", fileTimestamp))
+		Logfile = filepath.Join(LogDir, "fsg_errors_"+fileTimestamp+".txt")
 
 		maxSeverityLen := 0
 		for _, name := range SeverityName {
