@@ -18,13 +18,16 @@
   - Show item count/total.
     - e.g., Display `18/50 (36%)` on the bottom-right corner.
 
-## IMPORTANT NOTE
-**DO NOT** USE THIS PROJECT (*YET*).
+## Project Status: <ins>Pre-Release</ins>
+While the project is functionally complete and any title can be scraped without issue, there are features I would like to include before the initial release.
+As such: 
 
-It is currently <ins>unfinished</ins>.
+This project is to be considered <ins>unfinished</ins>, as of yet.
 
 This README will be changed to reflect the state of the project in the future.
 
-TODO (MENTION THIS TO WINDOWS USERS): WindowSizeMsg is used to report the terminal size. Note that **Windows** does not have support for reporting when resizes occur as it does not support the SIGWINCH signal. 
-
 *Stay tuned~*
+
+## Known Issues
+- Unable to resize the terminal window (Windows only): 
+  - [Reason](https://pkg.go.dev/github.com/charmbracelet/bubbletea#WindowSizeMsg): *Note that Windows does not have support for reporting when resizes occur as it does not support the SIGWINCH signal.* 
